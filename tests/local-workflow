@@ -1,0 +1,11 @@
+#!/bin/sh
+
+setup() {
+	true
+}
+
+test_true() {
+	true
+}
+
+. bin/ts
