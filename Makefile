@@ -2,7 +2,7 @@
 
 TS_VERSION=v2.0.3
 TS_URL=https://github.com/thinkerbot/ts/archive/$(TS_VERSION).tar.gz
-TS_CMD=bin/ts
+TS_CMD=tests/ts
 
 
 $(TS_CMD):
