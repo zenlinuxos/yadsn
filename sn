@@ -2,7 +2,6 @@
 
 set -eu
 
-# include lib/utils.sh
 
 main() {
 	[ $# -ge 1 ] || usage
@@ -23,6 +22,8 @@ main() {
 
 	cmd=$1
 	shift
+
+	trap clean EXIT INT
 
 	case $cmd in
 		create)
@@ -57,6 +58,10 @@ die() {
 	exit 1
 }
 
+clean() {
+	[ -e "${tmpfile:-}" ] && rm -f "$tmpfile" >/dev/null 2>&1
+}
+
 config_file() {
 	echo "${SN_DATA}/config"
 }
@@ -78,22 +83,46 @@ get_default_network() {
 	fi
 }
 
+get_editor() {
+	for editor in "${VISUAL:-}" "${EDITOR:-}" ; do
+		if command -v "$editor" >/dev/null 2>&1 ; then
+			echo "$editor"
+			return
+		fi
+	done
+	echo "vi"
+}
+
 cmd_create() {
 	network=$1
 	dir=${SN_DATA}/$network
-	mkdir -p "$dir" || die "Creating social network directory"
-	cd "$dir" || die "Unable to change into directory"
+	mkdir -p "$dir" || die "Creating network directory"
+	cd "$dir" || die "Unable to change into network directory"
 	git init > /dev/null
 	echo "${network}_username=$USER" >> "$(config_file)"
-	echo "Created network '$network'"
+	echo "Created network '$network'. Joined as '$USER'."
 }
 
 cmd_post() {
 	network=${1:-$(get_default_network)}
+	shift
+	cd "$SN_DATA/$network" || die "Unable to change into network directory"
 	username=$(get_config "$network" username)
 	[ -n "$username" ] \
 		|| die "Invalid username for network '$network' in '$(config_file)'"
-	echo "Posting with $username"
+	message="$*"
+	if [ -z "$message" ]; then
+		umask 077
+		tmpfile=$(mktemp)
+		[ -n "$tmpfile" ] && $(get_editor) "$tmpfile"
+		message=$(cat "$tmpfile")
+		rm -f "$tmpfile"
+	fi
+	[ -z "$message" ] && die "Can't post empty message"
+	echo "$message" | sed "1s/.*/[$(date -Is)]&/" >> "$username"
+	git add "$username" >/dev/null
+	git commit -m "$username:post:$(echo "$message" | sed -n '1p')" >/dev/null
+	echo "Posted message to '$network' with user '$username'"
 }
 
 main "$@"
