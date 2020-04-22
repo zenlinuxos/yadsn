@@ -1,11 +1,31 @@
 #!/bin/sh
 
+sn="$(dirname "$(dirname "$0")")/sn"
+
 setup() {
-	true
+	mkdir -p "$ts_test_dir"
+	export SN_DATA="$ts_test_dir"
 }
 
-test_true() {
-	true
+teardown() {
+	rm -r "$ts_test_dir"
 }
 
-. bin/ts
+error() {
+	echo "Error: $1"
+	exit 1
+}
+
+test_invalid_command() {
+	$sn invalid-command
+	assert_status 1 $?
+}
+
+test_create() {
+	$sn create test-social-network
+	assert_status 0 $?
+	[ -d "$SN_DATA/test-social-network/.git" ] \
+		|| error "Git repository not initialized"
+}
+
+. tests/ts

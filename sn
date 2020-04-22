@@ -4,13 +4,42 @@ set -eu
 
 # include lib/utils.sh
 
+main() {
+	cmd=$1
+	shift
+
+	mkdir -p "${SN_DATA:=$HOME/.sn}"
+
+	case $cmd in
+		create)
+			cmd_create "$1"
+		;;
+
+		*)
+			die "Invalid command"
+		;;
+	esac
+}
+
 usage() {
 	echo "usage: ${0##*/} <command>"
 	exit 1
 }
 
-cmd_create() {
-	# local cfg = $1
+die() {
+	echo "Error: $1" >&2
+	exit 1
 }
 
+cmd_create() {
+	dir=${SN_DATA}/$1
+	mkdir -p "$dir" || die "Creating social network directory"
+	cd "$dir" || die "Unable to change into directory"
+	git init
+}
 
+cmd_join() {
+	true
+}
+
+main "$@"
