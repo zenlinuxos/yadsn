@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# NOTE: assert_output uses multiple lines to avoid subshell last newline
+# 	trimming
+
+echo "$TS_DIFF"
+
+
 sn="$(dirname "$(dirname "$0")")/sn"
 
 setup() {
@@ -16,16 +22,50 @@ error() {
 	exit 1
 }
 
+test_no_command_shows_usage() {
+	$sn | assert_output "\
+$($sn --help)
+"
+}
+
 test_invalid_command() {
 	$sn invalid-command
 	assert_status 1 $?
 }
 
 test_create() {
-	$sn create test-social-network
+	$sn -n test-network create
 	assert_status 0 $?
-	[ -d "$SN_DATA/test-social-network/.git" ] \
-		|| error "Git repository not initialized"
+	[ -d "$SN_DATA/test-network/.git" ] || error "Git repository not initialized"
 }
+
+test_create_too_many_parameters() {
+	$sn create test network
+	assert_status 1 $?
+}
+
+test_create_default_username_in_config() {
+	test_create
+	assert_status 0 $?
+	assert_output "\
+test-network_username=$USER
+" < "$SN_DATA/config"
+}
+
+# TODO: Tests for default network
+
+test_post() {
+	test_create
+	$sn -n "test-network" post this is a very long message in the same line
+	assert_status 0 $?
+}
+
+test_post_default_network() {
+	test_create
+	$sn post this is a very long message in the same line
+	assert_status 0 $?
+}
+
+export TS_COLOR="true"
 
 . tests/ts

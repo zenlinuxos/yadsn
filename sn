@@ -5,14 +5,37 @@ set -eu
 # include lib/utils.sh
 
 main() {
+	[ $# -ge 1 ] || usage
+
+	[ -d "${SN_DATA:=$HOME/.sn}" ] || mkdir -p "${SN_DATA}" \
+		|| die "Creating sn data directory"
+
+	network=
+	while getopts n: option ; do
+		case $option in
+			n) network="$OPTARG" ;;
+			?) usage ;;
+		esac
+	done
+	shift $((OPTIND - 1))
+
+	[ $# -ge 1 ] || usage
+
 	cmd=$1
 	shift
 
-	mkdir -p "${SN_DATA:=$HOME/.sn}"
-
 	case $cmd in
 		create)
-			cmd_create "$1"
+			[ -n "$network" ] || die "Network option must be provided" true
+			cmd_create "$network"
+		;;
+
+		post)
+			cmd_post "$network" "$@"
+		;;
+
+		--help|-h)
+			usage
 		;;
 
 		*)
@@ -22,24 +45,55 @@ main() {
 }
 
 usage() {
-	echo "usage: ${0##*/} <command>"
+	cat <<EOF
+Usage: ${0##*/} [-n network-name] <command>"
+EOF
 	exit 1
 }
 
 die() {
 	echo "Error: $1" >&2
+	[ -n "${2:-}" ] && usage
 	exit 1
 }
 
-cmd_create() {
-	dir=${SN_DATA}/$1
-	mkdir -p "$dir" || die "Creating social network directory"
-	cd "$dir" || die "Unable to change into directory"
-	git init
+config_file() {
+	echo "${SN_DATA}/config"
 }
 
-cmd_join() {
-	true
+get_config() {
+	network=$1
+	variable=$2
+	awk -F= "/^${network}_${variable}/ { print \$2 }" "$(config_file)"
+}
+
+get_default_network() {
+	networks=$(find "$SN_DATA" -type d ! -path '*.git*' -a ! -path "$SN_DATA")
+	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
+		echo "${networks##*/}"
+	else
+		default_network=$(get_config default network)
+		[ -n "$default_network" ] || die "No default network defined in config"
+		echo "$default_network"
+	fi
+}
+
+cmd_create() {
+	network=$1
+	dir=${SN_DATA}/$network
+	mkdir -p "$dir" || die "Creating social network directory"
+	cd "$dir" || die "Unable to change into directory"
+	git init > /dev/null
+	echo "${network}_username=$USER" >> "$(config_file)"
+	echo "Created network '$network'"
+}
+
+cmd_post() {
+	network=${1:-$(get_default_network)}
+	username=$(get_config "$network" username)
+	[ -n "$username" ] \
+		|| die "Invalid username for network '$network' in '$(config_file)'"
+	echo "Posting with $username"
 }
 
 main "$@"
