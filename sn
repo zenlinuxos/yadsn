@@ -2,8 +2,12 @@
 
 set -eu
 
+. ./lib/file-format.sh
 
 main() {
+	command -v git >/dev/null 2>&1 \
+		|| die "Git must be installed to use this program."
+
 	[ $# -ge 1 ] || usage
 
 	[ -d "${SN_DATA:=$HOME/.sn}" ] || mkdir -p "${SN_DATA}" \
@@ -47,7 +51,7 @@ main() {
 
 usage() {
 	cat <<EOF
-Usage: ${0##*/} [-n network-name] <command>"
+Usage: ${0##*/} [-n network-name] <command>
 EOF
 	exit 1
 }
@@ -66,6 +70,14 @@ config_file() {
 	echo "${SN_DATA}/config"
 }
 
+posts_file() {
+	echo post
+}
+
+network_dir() {
+	echo "${SN_DATA}/$1"
+}
+
 get_config() {
 	network=$1
 	variable=$2
@@ -73,7 +85,10 @@ get_config() {
 }
 
 get_default_network() {
-	networks=$(find "$SN_DATA" -type d ! -path '*.git*' -a ! -path "$SN_DATA")
+	# we don't use -maxdepth because it's not POSIX standard
+	networks=$(find "$SN_DATA" -type d ! -path '*.git*' \
+									-a ! -path "$SN_DATA"\
+									-a ! -path "$SN_DATA/*/*")
 	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
 		echo "${networks##*/}"
 	else
@@ -93,20 +108,41 @@ get_editor() {
 	echo "vi"
 }
 
+# pre: working directory is a valid network with a git repository
+add_user() {
+	user=$1
+	mkdir "$user" || die "Creating user directory"
+	create_file "$user/$(posts_file)"
+	git add "$user" >/dev/null
+	git commit -m "User '$user' joined" >/dev/null
+	echo "${network}_username=$USER" >> "$(config_file)"
+}
+
+# pre: working directory is a valid network with a git repository
+add_message() {
+	username=$1
+	file=$2
+	shift 2
+	append_file "$username/$file" "$@"
+	git add "$username" >/dev/null
+	git commit -m "User '$username' added $file" >/dev/null
+}
+
 cmd_create() {
 	network=$1
-	dir=${SN_DATA}/$network
-	mkdir -p "$dir" || die "Creating network directory"
-	cd "$dir" || die "Unable to change into network directory"
+	mkdir -p "$(network_dir "$network")" || die "Creating network directory"
+	cd "$(network_dir "$network")" \
+		|| die "Unable to change into network directory"
 	git init > /dev/null
-	echo "${network}_username=$USER" >> "$(config_file)"
+	add_user "$USER"
 	echo "Created network '$network'. Joined as '$USER'."
 }
 
 cmd_post() {
 	network=${1:-$(get_default_network)}
 	shift
-	cd "$SN_DATA/$network" || die "Unable to change into network directory"
+	cd "$(network_dir "$network")" \
+		|| die "Unable to change into network directory"
 	username=$(get_config "$network" username)
 	[ -n "$username" ] \
 		|| die "Invalid username for network '$network' in '$(config_file)'"
@@ -118,10 +154,8 @@ cmd_post() {
 		message=$(cat "$tmpfile")
 		rm -f "$tmpfile"
 	fi
-	[ -z "$message" ] && die "Can't post empty message"
-	echo "$message" | sed "1s/.*/[$(date -Is)]&/" >> "$username"
-	git add "$username" >/dev/null
-	git commit -m "$username:post:$(echo "$message" | sed -n '1p')" >/dev/null
+	[ -n "$message" ] || die "Can't post empty message"
+	add_message "$username" "$(posts_file)" "$message"
 	echo "Posted message to '$network' with user '$username'"
 }
 

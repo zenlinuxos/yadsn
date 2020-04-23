@@ -18,5 +18,4 @@ test: $(TS_CMD)
 
 linter:
 	@echo "Running linter..."
-	@shellcheck -x -s sh tests/local-workflow
-	@shellcheck -s sh sn
+	@shellcheck -x -s sh tests/local-workflow sn

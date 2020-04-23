@@ -57,6 +57,13 @@ test-network_username=$USER
 " < "$SN_DATA/config"
 }
 
+test_create_default_username_in_repository() {
+	test_create
+	assert_status 0 $?
+	test -e "$SN_DATA/$network/$USER"
+	assert_status 0 $?
+}
+
 ###########
 # sn post #
 ###########
@@ -66,17 +73,17 @@ test_post() {
 	message="post this is a very long message in the same line"
 	$sn -n "$network" post "$message"
 	assert_status 0 $?
-	grep "\[.*\]$message" "$SN_DATA/$network/$USER"
+	grep -r "$message" "$SN_DATA/$network"
 	assert_status 0 $?
 	cd "$SN_DATA/$network" || exit 1
-	git log | grep -q "$message"
+	git log | grep -q "User.*added"
 	assert_status 0 $?
 }
 
 test_post_empty_message() {
 	test_create
 	# To avoid hanging stdout and stdin must be redirected to /dev/null
-	"$sn" post >/dev/null 2>&1 &
+	$sn post >/dev/null 2>&1 &
 	# It's not enough to run 'sn post' because then, an editor is shown to the
 	# user for entering the message. We use the pid of the sn command, in order
 	# to kill the vim process that will be run.
@@ -84,7 +91,9 @@ test_post_empty_message() {
 	sleep 1
 	kill -9 "$(ps -Af | awk "{if (\$3 == $!) print \$2}")"
 	assert_status 0 $?
-	cat -n "$SN_DATA/$network/$USER" 2>/dev/null | assert_output ""
+	wc -l "$SN_DATA/$network/$USER/post" | cut -f1 -d' ' | assert_output "\
+0
+"
 }
 
 test_post_default_network() {
@@ -92,7 +101,7 @@ test_post_default_network() {
 	message="post this is a very long message in the same line"
 	$sn post "$message" | grep "$network"
 	assert_status 0 $?
-	grep "\[.*\]$message" "$SN_DATA/$network/$USER"
+	grep -r "$message" "$SN_DATA/$network/$USER"
 	assert_status 0 $?
 }
 
