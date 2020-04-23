@@ -10,7 +10,7 @@ export_text() {
 # appends the given arguments to a file (given in arg1) and the last arg will
 # be treated specially (tabs, newlines will be modified)
 append_file() {
-	file=$1
-	message=$2
+	file="$1"
+	message="$2"
 	echo "$message" >> "$file"
 }

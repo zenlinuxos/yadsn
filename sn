@@ -14,9 +14,12 @@ main() {
 		|| die "Creating sn data directory"
 
 	network=
-	while getopts n: option ; do
+	username=
+	while getopts n:u:h option ; do
 		case $option in
 			n) network="$OPTARG" ;;
+			u) username="$OPTARG" ;;
+			h) usage ;;
 			?) usage ;;
 		esac
 	done
@@ -32,15 +35,22 @@ main() {
 	case $cmd in
 		create)
 			[ -n "$network" ] || die "Network option must be provided" true
+			username=${user:-$USER}
 			cmd_create "$network"
 		;;
 
 		post)
-			cmd_post "$network" "$@"
+			[ -n "${network:=$(get_default_network)}" ] \
+				|| die "No default network defined in config"
+			[ -n "${username:=$(get_config "$network" username)}" ] \
+				|| die "Invalid username for network '$network' in '$(config_file)'"
+			cmd_post "$@"
 		;;
 
-		--help|-h)
-			usage
+		log)
+			[ -n "${network:=$(get_default_network)}" ] \
+				|| die "No default network defined in config"
+			cmd_log "$@"
 		;;
 
 		*)
@@ -84,16 +94,26 @@ get_config() {
 	awk -F= "/^${network}_${variable}/ { print \$2 }" "$(config_file)"
 }
 
+# pre: working directory is a valid network with a git repository
+get_users() {
+	find . -type d ! -path '*.git*' \
+				-a ! -path "./*/*" \
+	| sed -nE 's/\.\/(.+)/\1/p'
+}
+
+get_networks() {
+	find "$SN_DATA" -type d ! -path '*.git*' \
+						-a ! -path "$SN_DATA"\
+						-a ! -path "$SN_DATA/*/*"
+}
+
 get_default_network() {
 	# we don't use -maxdepth because it's not POSIX standard
-	networks=$(find "$SN_DATA" -type d ! -path '*.git*' \
-									-a ! -path "$SN_DATA"\
-									-a ! -path "$SN_DATA/*/*")
+	networks=$(get_networks)
 	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
 		echo "${networks##*/}"
 	else
 		default_network=$(get_config default network)
-		[ -n "$default_network" ] || die "No default network defined in config"
 		echo "$default_network"
 	fi
 }
@@ -108,24 +128,30 @@ get_editor() {
 	echo "vi"
 }
 
+git_commit() {
+	commit_msg=$1
+	commit_date=${SN_TEST_NOW:-}
+	[ -n "$commit_date" ] && commit_date="--date $commit_date"
+	# shellcheck disable=2086
+	git commit -m "$commit_msg" $commit_date >/dev/null
+}
+
 # pre: working directory is a valid network with a git repository
+# pre: $username contains the user name to use
 add_user() {
-	user=$1
-	mkdir "$user" || die "Creating user directory"
-	create_file "$user/$(posts_file)"
-	git add "$user" >/dev/null
-	git commit -m "User '$user' joined" >/dev/null
-	echo "${network}_username=$USER" >> "$(config_file)"
+	mkdir "$username" || die "Creating user directory"
+	create_file "$username/$(posts_file)"
+	git add "$username" >/dev/null
+	git_commit "User '$username' joined"
 }
 
 # pre: working directory is a valid network with a git repository
 add_message() {
-	username=$1
-	file=$2
-	shift 2
+	file=$1
+	shift
 	append_file "$username/$file" "$@"
 	git add "$username" >/dev/null
-	git commit -m "User '$username' added $file" >/dev/null
+	git_commit "User '$username' added ${file##*/}"
 }
 
 cmd_create() {
@@ -134,18 +160,14 @@ cmd_create() {
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
 	git init > /dev/null
-	add_user "$USER"
+	add_user
+	echo "${network}_username=$username" >> "$(config_file)"
 	echo "Created network '$network'. Joined as '$USER'."
 }
 
 cmd_post() {
-	network=${1:-$(get_default_network)}
-	shift
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
-	username=$(get_config "$network" username)
-	[ -n "$username" ] \
-		|| die "Invalid username for network '$network' in '$(config_file)'"
 	message="$*"
 	if [ -z "$message" ]; then
 		umask 077
@@ -155,8 +177,19 @@ cmd_post() {
 		rm -f "$tmpfile"
 	fi
 	[ -n "$message" ] || die "Can't post empty message"
-	add_message "$username" "$(posts_file)" "$message"
+	[ -d "$username" ] || add_user
+	add_message "$(posts_file)" "$message"
 	echo "Posted message to '$network' with user '$username'"
+}
+
+cmd_log() {
+	cd "$(network_dir "$network")" \
+		|| die "Unable to change into network directory"
+	for user in $(get_users) ; do
+		# '--date unix' prints unix time in UTC
+		git blame --date unix "$user/$(posts_file)" \
+			| sed -E -e 's/^.* \(.* ([0-9]+) ([0-9]+)\) (.*)$/\1\t'"$user"'\t\2\t\3/'
+	done | sort
 }
 
 main "$@"

@@ -24,7 +24,7 @@ error() {
 
 test_no_command_shows_usage() {
 	$sn | assert_output "\
-$($sn --help)
+$($sn -h)
 "
 }
 
@@ -104,6 +104,54 @@ test_post_default_network() {
 	grep -r "$message" "$SN_DATA/$network/$USER"
 	assert_status 0 $?
 }
+
+# TODO: Multiline messages
+
+##########
+# sn log #
+##########
+
+test_log_one_user() {
+	test_create
+	for i in $(seq 0 9); do
+		$sn post "Test message num $i"
+	done
+	$sn log | wc -l | assert_output "\
+10
+"
+}
+
+test_log_multiple_users() {
+	test_create
+	for i in $(seq 0 4); do
+		$sn -u david post "Message $i from david"
+		$sn -u peter post "Message $i from peter"
+	done
+	$sn log | wc -l | assert_output "\
+10
+"
+}
+
+test_log_multiple_users_ordered() {
+	test_create
+	export SN_TEST_NOW
+	SN_TEST_NOW=$(date +%s)
+	for i in $(seq 0 1); do
+		$sn -u david post "Message $i from david"
+		SN_TEST_NOW=$((SN_TEST_NOW + 1))
+		$sn -u peter post "Message $i from peter"
+		SN_TEST_NOW=$((SN_TEST_NOW + 1))
+	done
+	# shellcheck disable=2126
+	$sn log | sed -n '1p;3p' | grep david | wc -l | assert_output "\
+2
+"
+	# shellcheck disable=2126
+	$sn log | sed -n '2p;4p' | grep peter | wc -l | assert_output "\
+2
+"
+}
+
 
 export TS_COLOR="true"
 

@@ -14,7 +14,7 @@ $(TS_CMD):
 
 test: $(TS_CMD)
 	@echo "Running tests..."
-	$(TS_CMD) -a tests/local-workflow
+	$(TS_CMD) tests/local-workflow
 
 linter:
 	@echo "Running linter..."
