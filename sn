@@ -4,11 +4,13 @@ set -eu
 
 . ./lib/file-format.sh
 
+CMDNAME=${0##*/}
+
 main() {
 	command -v git >/dev/null 2>&1 \
 		|| die "Git must be installed to use this program."
 
-	[ $# -ge 1 ] || usage
+	[ $# -ge 1 ] && [ "$1" != "--help" ] || usage
 
 	[ -d "${SN_DATA:=$HOME/.sn}" ] || mkdir -p "${SN_DATA}" \
 		|| die "Creating sn data directory"
@@ -34,7 +36,7 @@ main() {
 
 	case $cmd in
 		create)
-			[ -n "$network" ] || die "Network option must be provided" true
+			[ -n "$network" ] || die "Network option must be provided"
 			username=${user:-$USER}
 			cmd_create
 		;;
@@ -72,7 +74,7 @@ EOF
 
 die() {
 	echo "Error: $1" >&2
-	[ -n "${2:-}" ] && usage
+	echo "Try '$CMDNAME --help' for more information."
 	exit 1
 }
 
