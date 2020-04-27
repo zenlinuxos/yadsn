@@ -35,7 +35,13 @@ log - show all messages ordered as a timeline (newest on top)
 - [ ] prompt user for what username they would like to use in this network (default to current $USER value).
 
 ### log
+- [x] define message id in order to be able to 'show' it -> git commit
+- [x] format output
+
+	[2020-04-12 12:23 | #messageid] @username: asdfasdf asdf asd asdf
+
 - [ ] add option to use default pager
+- [ ] use colors
 
 Requirements:
 - One per line
