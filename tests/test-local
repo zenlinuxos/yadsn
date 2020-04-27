@@ -3,9 +3,6 @@
 # NOTE: assert_output uses multiple lines to avoid subshell last newline
 # 	trimming
 
-echo "$TS_DIFF"
-
-
 sn="$(dirname "$(dirname "$0")")/sn"
 
 setup() {
@@ -167,7 +164,22 @@ test_log_multiple_users_ordered() {
 "
 }
 
+test_log_multiline_messages() {
+	test_create
+	$sn post "Multiline
+message"
+	$sn log | grep "Multiline\.\.\."
+	assert_status 0 $?
+}
+
+test_log_quoted_messages() {
+	test_create
+	$sn post "Message \"with\" some \"quotes\""
+	$sn log | grep "Message \"with\" some \"quotes\""
+	assert_status 0 $?
+}
 
 export TS_COLOR="true"
+#export TS_DEBUG="true"
 
 . tests/ts

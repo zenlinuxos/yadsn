@@ -14,8 +14,8 @@ $(TS_CMD):
 
 test: $(TS_CMD)
 	@echo "Running tests..."
-	$(TS_CMD) tests/local-workflow
+	$(TS_CMD) tests/test-*
 
 linter:
 	@echo "Running linter..."
-	@shellcheck -x -s sh tests/local-workflow sn
+	@shellcheck -x -s sh tests/test-* sn

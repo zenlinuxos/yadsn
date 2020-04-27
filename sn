@@ -190,8 +190,11 @@ cmd_post() {
 cmd_log() {
 	for user in $(get_users) ; do
 		# '--date unix' prints unix time in UTC
-		git blame --date unix "$user/$(posts_file)" \
-			| sed -E -e 's/^.* \(.* ([0-9]+) ([0-9]+)\) (.*)$/\1\t'"$user"'\t\2\t\3/'
+		entry=$(git blame --date unix "$user/$(posts_file)" \
+			| sed -E 's/^.* \(.* ([0-9]+) ([0-9]+)\) "(.*)"$/\1\t'"$user"'\t\2\t\3/' \
+			| sed 's/<NEWLINE>.*$/.../')
+		entry=$(import_text "$entry")
+		printf "%s\n" "$entry"
 	done | sort -rn
 }
 

@@ -1,0 +1,98 @@
+#!/bin/sh
+
+. lib/file-format.sh
+
+setup() {
+	mkdir -p "$ts_test_dir"
+	export SN_DATA="$ts_test_dir"
+	cd "$ts_test_dir" || error "unable to enter test directory"
+}
+
+teardown() {
+	rm -r "$ts_test_dir"
+}
+
+error() {
+	echo "Error: $1"
+	exit 1
+}
+
+test_create() {
+	create_file "test"
+	assert_status 0 $?
+	find . -type f | wc -l | assert_output "\
+1
+"
+}
+
+test_export_text_doublequotes_escaped() {
+	export_text "Hello\"all!" | assert_output "\
+Hello\"\"all!
+"
+}
+
+test_export_text_newlines() {
+	printf "Hello\nall\n!" | assert_output "\
+Hello
+all
+!"
+	export_text "Hello\nall\n!" | assert_output "\
+Hello<NEWLINE>all<NEWLINE>!
+"
+}
+
+test_append_file_simple() {
+	create_file "test"
+	append_file "test" "one field and line"
+	assert_output "\
+\"one field and line\"
+" < "test"
+}
+
+test_append_file_multiline() {
+	create_file "test"
+	append_file "test" "one line
+another line"
+	assert_output "\
+\"one line<NEWLINE>another line\"
+" < "test"
+}
+
+test_append_file_multifield() {
+	create_file "test"
+	append_file "test" "field 1" "another field"
+	assert_output "\
+\"field 1\",\"another field\"
+" < "test"
+}
+
+test_append_file_full() {
+	create_file "test"
+	append_file "test" "field \"1\"" "another field" "third with
+multiple
+lines"
+	assert_output "\
+\"field \"\"1\"\"\",\"another field\",\"third with<NEWLINE>multiple<NEWLINE>lines\"
+" < "test"
+}
+
+test_import_text() {
+	import_text "Hello<NEWLINE>all" | assert_output "\
+Hello
+all
+"
+	import_text "Hello<NEWLINE>all<NEWLINE>" | assert_output "\
+Hello
+all
+
+"
+	import_text "Hello\"\"all\"\"" | assert_output "\
+Hello\"all\"
+"
+}
+
+
+export TS_COLOR="true"
+#export TS_DEBUG="true"
+
+. tests/ts
