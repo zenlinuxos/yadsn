@@ -143,11 +143,11 @@ test_log_multiple_users_ordered() {
 		SN_TEST_NOW=$((SN_TEST_NOW + 1))
 	done
 	# shellcheck disable=2126
-	$sn log | sed -n '1p;3p' | grep david | wc -l | assert_output "\
+	$sn log | sed -n '2p;4p' | grep david | wc -l | assert_output "\
 2
 "
 	# shellcheck disable=2126
-	$sn log | sed -n '2p;4p' | grep peter | wc -l | assert_output "\
+	$sn log | sed -n '1p;3p' | grep peter | wc -l | assert_output "\
 2
 "
 }

@@ -19,6 +19,7 @@ where 'command' can be:
 
 create - create a new local network
 post [<message>] - post a message to a network (default network: see -n)
+log - shows all messages ordered as a timeline (newest on top)
 
 ```
 ## TODO
