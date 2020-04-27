@@ -179,6 +179,28 @@ test_log_quoted_messages() {
 	assert_status 0 $?
 }
 
+###########
+# sn show #
+###########
+
+test_show_multiline() {
+	test_create
+	$sn post "Multiline
+message with several
+lines"
+	id="$($sn log | grep -o '#[0-9a-z]*')"
+	# trick: remove # using parameter expansion
+	output="$($sn show "${id###}")"
+	echo "$output" | grep '^Multiline'
+	assert_status 0 $?
+	echo "$output" | grep '^message with several'
+	assert_status 0 $?
+	echo "$output" | grep '^lines'
+	assert_status 0 $?
+}
+
+
+
 export TS_COLOR="true"
 #export TS_DEBUG="true"
 

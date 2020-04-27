@@ -20,13 +20,14 @@ Options:
 where 'command' can be:
 
 create - create a new local network
-members - show all members in the network
 post [<message>] - post a message to a network (default network: see -n)
+show <message-id> - show full message identified by 'message-id'
 log - show all messages ordered as a timeline (newest on top)
+members - show all members in the network
 
 ```
 ## TODO
-- [ ] add a partial SHA256 id  to identify each message... so that we can refere to them even if lines change
+- [ ] add test-performance
 
 ### Options
 - [ ] add -u to specify a given username to use in a command, default to the one in the config file or $USER if no other was provided.
@@ -38,15 +39,20 @@ log - show all messages ordered as a timeline (newest on top)
 - [x] define message id in order to be able to 'show' it -> git commit
 - [x] format output
 
-	[2020-04-12 12:23 | #messageid] @username: asdfasdf asdf asd asdf
+	[2020-04-12 12:23 | #message-id] @username: asdfasdf asdf asd asdf
 
 - [ ] add option to use default pager
 - [ ] use colors
 
-Requirements:
-- One per line
-- Date should be printed in local time
-- A way to refer to each message, in order to view it fully, should be provided.
+### show
+- [x] format output
+
+	[2020-04-12 12:23 | #message-id] by @username
+
+	asdfasdf
+	asdf
+	asd asdf
+- [ ] allow relative message id (-1 = latest message, etc.)
 
 ## Software design
 - repository organization
