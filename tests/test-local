@@ -3,6 +3,8 @@
 # NOTE: assert_output uses multiple lines to avoid subshell last newline
 # 	trimming
 
+. lib/globals.sh
+
 sn="$(dirname "$(dirname "$0")")/sn"
 
 setup() {
@@ -36,7 +38,7 @@ test_invalid_command() {
 
 test_create() {
 	network="test-network"
-	$sn -n "$network" create
+	$sn create "$network"
 	assert_status 0 $?
 	[ -d "$SN_DATA/$network/.git" ] || error "Git repository not initialized"
 }
@@ -44,6 +46,14 @@ test_create() {
 test_create_too_many_parameters() {
 	$sn create test network
 	assert_status 1 $?
+}
+
+test_create_duplicate() {
+	$sn create test-network
+	assert_status 0 $?
+	$sn create test-network 2>&1 | head -1 | assert_output "\
+Error: A network named 'test-network' already exists
+"
 }
 
 test_create_default_username_in_config() {
@@ -103,7 +113,7 @@ test_post_empty_message() {
 	sleep 1
 	kill -9 "$(ps -Af | awk "{if (\$3 == $!) print \$2}")"
 	assert_status 0 $?
-	wc -l "$SN_DATA/$network/$USER/post" | cut -f1 -d' ' | assert_output "\
+	wc -l "$SN_DATA/$network/$USER/$(posts_file)" | cut -f1 -d' ' | assert_output "\
 0
 "
 }

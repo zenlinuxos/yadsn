@@ -16,6 +16,11 @@ import_text() {
 			  | sed 's/""/"/g'
 }
 
+shorten_text() {
+	echo "$1" | sed 's/<NEWLINE>.*$/.../g' \
+			  | sed 's/""/"/g'
+}
+
 append_file() {
 	file="$1"
 	shift

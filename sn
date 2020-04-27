@@ -2,7 +2,8 @@
 
 set -eu
 
-. ./lib/file-format.sh
+. lib/globals.sh
+. lib/file-format.sh
 
 CMDNAME=${0##*/}
 
@@ -30,6 +31,14 @@ main() {
 
 	[ $# -ge 1 ] || usage
 
+	network="${network:=$(get_default_network)}"
+	username="${username:=$(get_config "$network" username)}"
+
+	if [ -n "$network" ]; then
+		cd "$(network_dir "$network")" \
+			|| die "Unable to change into network directory"
+	fi
+
 	cmd=$1
 	shift
 
@@ -37,34 +46,26 @@ main() {
 
 	case $cmd in
 		create)
-			[ -n "$network" ] || die "Network option must be provided"
-			username=${user:-$USER}
+			[ -n "${1:-}" ] || die "Missing name of new network"
+			[ "$#" -eq 1 ] || die "Too many arguments"
+			network="$1"
+			username="${username:-$USER}"
 			cmd_create
 		;;
 
 		post)
-			[ -n "${network:=$(get_default_network)}" ] \
-				|| die "No default network defined in config"
-			[ -n "${username:=$(get_config "$network" username)}" ] \
-				|| die "Invalid username for network '$network' in '$(config_file)'"
-			cd "$(network_dir "$network")" \
-				|| die "Unable to change into network directory"
+			[ -n "$network" ] || die "No default network defined in config"
+			[ -n "$username" ]|| die "Unknown username to use in '$network'"
 			cmd_post "$@"
 		;;
 
 		log|members)
-			[ -n "${network:=$(get_default_network)}" ] \
-				|| die "No default network defined in config"
-			cd "$(network_dir "$network")" \
-				|| die "Unable to change into network directory"
+			[ -n "$network" ] || die "No default network defined in config"
 			"cmd_$cmd" "$@"
 		;;
 
 		show)
-			[ -n "${network:=$(get_default_network)}" ] \
-				|| die "No default network defined in config"
-			cd "$(network_dir "$network")" \
-				|| die "Unable to change into network directory"
+			[ -n "$network" ] || die "No default network defined in config"
 			message_id="${1:-}"
 			[ -n "$message_id" ] \
 				|| { die "No message id provided" ; }
@@ -83,6 +84,8 @@ Usage: $CMDNAME [-n network-name] <command>
 
 where command can be:
 
+create <network-name>
+
 show <message-id>
 
 - <message-id>: the id of the message to show. See
@@ -94,7 +97,7 @@ EOF
 
 die() {
 	echo "Error: $1" >&2
-	echo "Try '$CMDNAME --help' for more information."
+	[ "${2:-}" = 'no' ] || echo "Try '$CMDNAME --help' for more information." >&2
 	exit 1
 }
 
@@ -102,21 +105,10 @@ clean() {
 	[ -e "${tmpfile:-}" ] && rm -f "$tmpfile" >/dev/null 2>&1
 }
 
-config_file() {
-	echo "${SN_DATA}/config"
-}
-
-posts_file() {
-	echo post
-}
-
-network_dir() {
-	echo "${SN_DATA}/$1"
-}
-
 get_config() {
 	network=$1
 	variable=$2
+	[ -f "$(config_file)" ] || { echo "" ; return ; }
 	awk -F= "/^${network}_${variable}/ { print \$2 }" "$(config_file)"
 }
 
@@ -181,6 +173,8 @@ add_message() {
 }
 
 cmd_create() {
+	[ -d "$(network_dir "$network")" ] \
+		&& die "A network named '$network' already exists"
 	mkdir -p "$(network_dir "$network")" || die "Creating network directory"
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
@@ -224,30 +218,36 @@ cmd_log() {
 		# '--date unix' prints unix time in UTC
 		entry=$(git blame --date unix "$user/$(posts_file)" \
 			| sed -E 's/^([0-9a-z]+) \(.* ([0-9]+) [0-9 ]+\) "(.*)"$/\2\t'"$user"'\t\1\t\3/')
-		# Show only the first line in the messsage
-		entry=$(echo "$entry" | sed 's/<NEWLINE>.*$/.../')
-		# Transform tabs
-		entry=$(import_text "$entry")
+		entry=$(shorten_text "$entry")
 		printf "%s\n" "$entry"
 	# sort by unix time, and then format the output
 	done | sort -rn | format_log
 }
 
-cmd_show() {
+get_message_data() {
 	# trick: use '|| true' to avoid exiting if error due to 'set -e'
-	show_out="$(git show --date unix "$message_id" 2>/dev/null || true)"
-	[ -n "$show_out" ] || die "Invalid message id"
-	show_date="$(echo "$show_out" | \
+	msg_out="$(git show --date unix "$message_id" 2>/dev/null || true)"
+	[ -n "$msg_out" ] || die "Invalid message id"
+	msg_date="$(echo "$msg_out" | \
 		sed -nE 's/^Date:\s+([0-9]+)/\1/p')"
-	show_user="$(echo "$show_out" | \
+	msg_user="$(echo "$msg_out" | \
 		sed -nE 's/^diff.*\/(.+)\/'"$(posts_file)"'$/\1/p')"
-	printf "[%s | %s] by @%s\n\n" \
-		"$(date +'%x %R' -d @"$show_date")" \
+	msg_text=$(echo "$msg_out" | sed -nE 's/^\+"(.*)"$/\1/p')
+	printf "%s\t%s\t%s\t%s\n" \
+		"$msg_date" \
+		"$msg_user" \
 		"$message_id" \
-		"$show_user"
-	text=$(echo "$show_out" | sed -nE 's/^\+"(.*)"$/\1/p')
-	text=$(import_text "$text")
-	printf "%s\n" "$text"
+		"$msg_text"
+}
+
+cmd_show() {
+	# trick: don't use $() to be able to access function msg_* variables here
+	get_message_data >/dev/null
+	printf "[%s | %s] by @%s\n\n" \
+		"$(date +'%x %R' -d @"$msg_date")" \
+		"$message_id" \
+		"$msg_user"
+	printf "%s\n" "$(import_text "$msg_text")"
 }
 
 main "$@"
