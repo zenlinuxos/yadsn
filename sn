@@ -36,7 +36,7 @@ main() {
 		create)
 			[ -n "$network" ] || die "Network option must be provided" true
 			username=${user:-$USER}
-			cmd_create "$network"
+			cmd_create
 		;;
 
 		post)
@@ -44,13 +44,17 @@ main() {
 				|| die "No default network defined in config"
 			[ -n "${username:=$(get_config "$network" username)}" ] \
 				|| die "Invalid username for network '$network' in '$(config_file)'"
+			cd "$(network_dir "$network")" \
+				|| die "Unable to change into network directory"
 			cmd_post "$@"
 		;;
 
-		log)
+		log|members)
 			[ -n "${network:=$(get_default_network)}" ] \
 				|| die "No default network defined in config"
-			cmd_log "$@"
+			cd "$(network_dir "$network")" \
+				|| die "Unable to change into network directory"
+			"cmd_$cmd" "$@"
 		;;
 
 		*)
@@ -155,7 +159,6 @@ add_message() {
 }
 
 cmd_create() {
-	network=$1
 	mkdir -p "$(network_dir "$network")" || die "Creating network directory"
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
@@ -165,9 +168,11 @@ cmd_create() {
 	echo "Created network '$network'. Joined as '$USER'."
 }
 
+cmd_members() {
+	get_users
+}
+
 cmd_post() {
-	cd "$(network_dir "$network")" \
-		|| die "Unable to change into network directory"
 	message="$*"
 	if [ -z "$message" ]; then
 		umask 077
@@ -183,8 +188,6 @@ cmd_post() {
 }
 
 cmd_log() {
-	cd "$(network_dir "$network")" \
-		|| die "Unable to change into network directory"
 	for user in $(get_users) ; do
 		# '--date unix' prints unix time in UTC
 		git blame --date unix "$user/$(posts_file)" \

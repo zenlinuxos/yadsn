@@ -64,6 +64,21 @@ test_create_default_username_in_repository() {
 	assert_status 0 $?
 }
 
+##############
+# sn members #
+##############
+
+test_members() {
+	# A default user is created when running the create command (+1)
+	test_create
+	for i in $(seq 0 9); do
+		$sn -u "user$i" post "Test message from user$i"
+	done
+	$sn members | wc -l | assert_output "\
+11
+"
+}
+
 ###########
 # sn post #
 ###########

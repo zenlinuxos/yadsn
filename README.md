@@ -6,7 +6,7 @@ sn (social-network) is a Git-based decentralized social network written in shell
 
 ## Usage
 ```
-sn [-n network] command [arguments]
+sn [-n network] [-u username] command [arguments]
 
 Options:
 
@@ -14,27 +14,28 @@ Options:
 		Default: If there's only one network, that will be used.
 				 Otherwise, the variable 'default_network' in
 				 your config file will be used.
+	-u: username
+		Default: Defined per network in the config file.
 
 where 'command' can be:
 
 create - create a new local network
+members - show all members in the network
 post [<message>] - post a message to a network (default network: see -n)
-log - shows all messages ordered as a timeline (newest on top)
+log - show all messages ordered as a timeline (newest on top)
 
 ```
 ## TODO
-
-- [ ] Add a partial SHA256 id  to identify each message... so that we can refere to them even if lines change
+- [ ] add a partial SHA256 id  to identify each message... so that we can refere to them even if lines change
 
 ### Options
-
-- [ ] Add -u to specify a given username to use in a command, default to the one in the config file or $USER if no other was provided.
+- [ ] add -u to specify a given username to use in a command, default to the one in the config file or $USER if no other was provided.
 
 ### create
-
-- [ ] Prompt user for what username they would like to use in this network (default to current $USER value).
+- [ ] prompt user for what username they would like to use in this network (default to current $USER value).
 
 ### log
+- [ ] add option to use default pager
 
 Requirements:
 - One per line
@@ -42,7 +43,6 @@ Requirements:
 - A way to refer to each message, in order to view it fully, should be provided.
 
 ## Software design
-
 - repository organization
 	- one repo per social network or one repo for all social networks?
 		- it's clearly one repo pero social network...
@@ -50,20 +50,16 @@ Requirements:
 - what should make do by default?
 
 ### Username
-
 - Username? Same as configured in git? username in the social network you're writing to? (I guess any centralized repository requires some kind of authentication)
 	- Username = $USER
-
 - Username duplicates? what if you join a social network and there's someone with your name?
 	- we could use the e-mail as id, but that's not privacy-friendly.
 	- we could ask the user for its name when creating a social network and
 	  then the username would be `username@social-network-name`
 	- when you join a network, if there's already a username there, ask the user for another name.
 	- if pushing changes and there's a conflict in the username file, this means someone else has posted a message...  (SIGNING)
-
 - [Usernames in LDAP GitHub integration](https://help.github.com/en/enterprise/2.16/admin/user-management/using-ldap#username-considerations-with-ldap)
 	- Restricted to alphanumeric and dashes.
-
 - [What characters should I use or not use in usernames on Linux?](https://serverfault.com/questions/73084/what-characters-should-i-use-or-not-use-in-usernames-on-linux)
 	- POSIX.1-2008: [a-zA-Z0-9._-]
 
@@ -76,7 +72,6 @@ Requirements:
 - It's a must to be able to work locally, without a connection. This means you have to be able to create a local network (aka, git repository).
 
 ### Config file
-
 network_name_username=...
 network_name_signing_key=...
 
