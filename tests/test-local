@@ -209,7 +209,48 @@ lines"
 	assert_status 0 $?
 }
 
+###########
+# sn like #
+###########
 
+test_like() {
+	test_log_multiple_users
+	# save last message id
+	message_id="$($sn log | tail +10 | grep -o '#[0-9a-z]*')"
+	message_id="${message_id###}"
+	$sn like "$message_id"
+	grep "^\"$message_id" "$SN_DATA/$network/$USER/$(likes_file)"
+	assert_status 0 $?
+}
+
+test_like_duplicate() {
+	test_create
+	$sn post "One message"
+	message_id="$($sn log | grep -o '#[0-9a-z]*')"
+	message_id="${message_id###}"
+	$sn like "$message_id"
+	assert_status 0 $?
+	$sn like "$message_id" 2>&1 | head -1 | assert_output "\
+Error: You already liked this message!
+"
+}
+
+test_like_in_other_commands() {
+	test_create
+	$sn post "One message"
+	message_id="$($sn log | grep -o '#[0-9a-z]*')"
+	message_id="${message_id###}"
+	$sn log | grep '❤️0'
+	assert_status 0 $?
+	$sn show "$message_id" | grep '❤️0'
+	assert_status 0 $?
+	$sn like "$message_id"
+	assert_status 0 $?
+	$sn log | grep '❤️1'
+	assert_status 0 $?
+	$sn show "$message_id" | grep '❤️1'
+	assert_status 0 $?
+}
 
 export TS_COLOR="true"
 #export TS_DEBUG="true"

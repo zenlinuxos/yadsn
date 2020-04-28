@@ -64,12 +64,12 @@ main() {
 			"cmd_$cmd" "$@"
 		;;
 
-		show)
+		show|like)
 			[ -n "$network" ] || die "No default network defined in config"
-			message_id="${1:-}"
-			[ -n "$message_id" ] \
+			user_msg_id="${1:-}"
+			[ -n "$user_msg_id" ] \
 				|| { die "No message id provided" ; }
-			cmd_show
+			"cmd_$cmd" "$@"
 		;;
 
 		*)
@@ -80,17 +80,41 @@ main() {
 
 usage() {
 	cat <<EOF
-Usage: $CMDNAME [-n network-name] <command>
+Usage: $CMDNAME [global-options] <command>
 
-where command can be:
+Global options
 
-create <network-name>
+	-n network-name: If not provided, and there is only one network in the
+		data directory, this is automatically selected. If there is more than
+		one, the variable 'default_network' from the config file is used.
 
-show <message-id>
+	-u username: The username to use when executing the command. If none is
+		provided, the variable '<network-name>_username' from the config file is
+		used (see -n for how <network-name> is selected).
 
-- <message-id>: the id of the message to show. See
-the output of '$CMDNAME log', ids are prefixed by #.
-Don't include the hash character.
+Commands
+
+	create <network-name>
+		Create a new local network. -n does not apply, but -u can be used to
+		define what username to use by default in that network.
+
+	members
+		Shows a list of users in the network.
+
+	log
+		Show posts, most recent first. Only the first line of each message is
+		shown, with an ellipsis representing messages with more than one line.
+
+	post [<message>]
+		Post a message in a network. No quotation necessary. If no text is
+		provided the default editor is used to input the message.
+
+	show <message-id>
+		Shows a message along all its associated information. The message id
+		can be obtained with the 'log' command.
+
+	like <message-id>
+		Like a message. The message id can be obtained with the 'log' command.
 EOF
 	exit 1
 }
@@ -144,6 +168,13 @@ get_editor() {
 		fi
 	done
 	echo "vi"
+}
+
+get_likes() {
+	find . -type f \( ! -path '*.git*' \
+		-a -name "$(likes_file)" \) -print0 \
+		| xargs -0 grep "^\"$1" \
+		| wc -l
 }
 
 git_commit() {
@@ -205,15 +236,20 @@ cmd_post() {
 
 format_log() {
 	while read -r line ; do
-		printf "[%s | #%s] @%s: %s\n" \
-			"$(echo "$line" | cut -f1 | sed -E 's/(.*)/@\1/' | xargs -n1 date +'%x %R' -d)" \
+		msg_id="$(echo "$line" | cut -f3)"
+		printf "[%s | #%s | ❤️%s] @%s: %s\n" \
+			"$(echo "$line" | cut -f1 | sed 's/.*/@&/' | xargs -n1 date +'%x %R' -d)" \
 			"$(echo "$line" | cut -f3)" \
+			"$(get_likes "$msg_id")" \
 			"$(echo "$line" | cut -f2)" \
 			"$(echo "$line" | cut -f4-)"
 	done
 }
 
 cmd_log() {
+	# using git blame allows to show always the latest version of a post, and
+	# don't show deleted posts. This would be really complex and inefficient
+	# using git log.
 	for user in $(get_users) ; do
 		# '--date unix' prints unix time in UTC
 		entry=$(git blame --date unix "$user/$(posts_file)" \
@@ -226,28 +262,35 @@ cmd_log() {
 
 get_message_data() {
 	# trick: use '|| true' to avoid exiting if error due to 'set -e'
-	msg_out="$(git show --date unix "$message_id" 2>/dev/null || true)"
+	msg_out="$(git show --date unix "$user_msg_id" 2>/dev/null || true)"
 	[ -n "$msg_out" ] || die "Invalid message id"
+	# get full SHA-1 hash from the one the user provided
+	msg_full_id="$(git rev-parse "$user_msg_id")"
+	msg_short_id="$(git rev-parse --short "$user_msg_id")"
 	msg_date="$(echo "$msg_out" | \
 		sed -nE 's/^Date:\s+([0-9]+)/\1/p')"
 	msg_user="$(echo "$msg_out" | \
 		sed -nE 's/^diff.*\/(.+)\/'"$(posts_file)"'$/\1/p')"
 	msg_text=$(echo "$msg_out" | sed -nE 's/^\+"(.*)"$/\1/p')
-	printf "%s\t%s\t%s\t%s\n" \
-		"$msg_date" \
-		"$msg_user" \
-		"$message_id" \
-		"$msg_text"
 }
 
 cmd_show() {
 	# trick: don't use $() to be able to access function msg_* variables here
 	get_message_data >/dev/null
-	printf "[%s | %s] by @%s\n\n" \
+	printf "[%s | %s] by @%s (❤️%s)\n\n" \
 		"$(date +'%x %R' -d @"$msg_date")" \
-		"$message_id" \
-		"$msg_user"
+		"#$msg_short_id" \
+		"$msg_user" \
+		"$(get_likes "$msg_full_id")"
 	printf "%s\n" "$(import_text "$msg_text")"
+}
+
+cmd_like() {
+	get_message_data >/dev/null
+	grep -q "$msg_full_id" "$username/$(likes_file)" 2>/dev/null \
+		&& die "You already liked this message!" "no"
+	add_message "$(likes_file)" "$msg_full_id"
+	echo "Liked message from '$msg_user' in network '$network'"
 }
 
 main "$@"

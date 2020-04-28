@@ -27,31 +27,17 @@ members - show all members in the network
 
 ```
 ## TODO
-- [ ] add test-performance
-
-### Options
-- [ ] add -u to specify a given username to use in a command, default to the one in the config file or $USER if no other was provided.
+- [ ] add test-performance using a data generator
+	- `get_likes` using grep -r | grep vs current find solution
 
 ### create
 - [ ] prompt user for what username they would like to use in this network (default to current $USER value).
 
 ### log
-- [x] define message id in order to be able to 'show' it -> git commit
-- [x] format output
-
-	[2020-04-12 12:23 | #message-id] @username: asdfasdf asdf asd asdf
-
 - [ ] add option to use default pager
 - [ ] use colors
 
 ### show
-- [x] format output
-
-	[2020-04-12 12:23 | #message-id] by @username
-
-	asdfasdf
-	asdf
-	asd asdf
 - [ ] allow relative message id (-1 = latest message, etc.)
 
 ## Software design
@@ -87,8 +73,7 @@ members - show all members in the network
 network_name_username=...
 network_name_signing_key=...
 
-### File format
-- We could use Git's own message facilities, but then it wouldn't be easy to edit your own messages... which in fact could be a interesting feature, though. I think it makes sense that you can edit your messages easily...
+### Repository organization
 - Each user file could be seen as a user log, where all it's actions appear, including likes, replies, etc. This allows to easily sign it, back it up, etc. Although, because we're using Git, this log is implicitly available... We could have a different file for each type of data.
 ```
 network/
@@ -98,17 +83,10 @@ network/
 		likes
 		follows
 ```
-- Dates (Does it make sense that dates are in the text files? I mean, they're in Git too).
-```
-	# Print UTC time in ISO-8601 format
-	$ date -uIs		# run at 16:19 (I'm UTC+2)
-	2020-04-22T14:19:17+00:00
-	$ date --rfc-3339=seconds
 
-	$ git annotate
-	6e3d7e74        (David Alfonso  2020-04-22 19:36:35 +0200
-	1)[2020-04-22T19:36:35+02:00]Un mensaje de prueba super chulo
-```
+### File format
+All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
+
 - Delete posts or replies with an empty line.
 
 - Each line represents the id of the posts/reply? This seems too fragile to me, maybe an improvement would be to use a partial hash...
@@ -135,7 +113,6 @@ user-2
 user-1
 ```
 ## Future improvements
-- Artificial data generator
 - Terminal video showing how the network works
 - each user could post to its own file (no conflicts with other users, just append)
 - post id = commit id? alternative postid per user
