@@ -4,43 +4,32 @@ sn (social-network) is a Git-based decentralized social network written in shell
 
 ## Installation
 
+## Quick tutorial
+TODO
+
 ## Usage
-```
-sn [-n network] [-u username] command [arguments]
 
-Options:
 
-	-n: network name where the command will apply.
-		Default: If there's only one network, that will be used.
-				 Otherwise, the variable 'default_network' in
-				 your config file will be used.
-	-u: username
-		Default: Defined per network in the config file.
+## Configuration
+network_name_username=...
+network_name_signing_key=...
 
-where 'command' can be:
-
-create - create a new local network
-post [<message>] - post a message to a network (default network: see -n)
-show <message-id> - show full message identified by 'message-id'
-log - show all messages ordered as a timeline (newest on top)
-members - show all members in the network
-
-```
-## TODO
-- [ ] add test-performance using a data generator
-	- `get_likes` using grep -r | grep vs current find solution
-
-### create
-- [ ] prompt user for what username they would like to use in this network (default to current $USER value).
-
-### log
-- [ ] add option to use default pager
-- [ ] use colors
-
-### show
-- [ ] allow relative message id (-1 = latest message, etc.)
 
 ## Software design
+
+### File format
+All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
+
+### Repository organization
+- Each user file could be seen as a user log, where all it's actions appear, including likes, replies, etc. This allows to easily sign it, back it up, etc. Although, because we're using Git, this log is implicitly available... We could have a different file for each type of data.
+```
+network/
+	user1/
+		posts
+		replies
+		likes
+		follows
+```
 - repository organization
 	- one repo per social network or one repo for all social networks?
 		- it's clearly one repo pero social network...
@@ -60,6 +49,7 @@ members - show all members in the network
 	- Restricted to alphanumeric and dashes.
 - [What characters should I use or not use in usernames on Linux?](https://serverfault.com/questions/73084/what-characters-should-i-use-or-not-use-in-usernames-on-linux)
 	- POSIX.1-2008: [a-zA-Z0-9._-]
+- Scuttlebutt uses cryptography to resolve the problem of a global name by using your public key as your id. The name is just an alias to your key, and so it's not unique.
 
 ### Network creation and join
 - what if I create a sn and then join another with the same name?
@@ -69,55 +59,30 @@ members - show all members in the network
 - what if I create a sn and then join another with a different name?
 - It's a must to be able to work locally, without a connection. This means you have to be able to create a local network (aka, git repository).
 
-### Config file
-network_name_username=...
-network_name_signing_key=...
+## TODO
+- create: prompt user for what username they would like to use in this network
+	- this would be solved if we used key-based identification
+- push: changes to remote social network
+- push:pre-push validations to mantain network data integrity
+	- force pull if remote has changed
+	- allow changes only in the last lines of files
+	- one commit per line changed
+- pull: retrieve changes from remote social network
+- add test-performance using a data generator
+	- `get_likes` using grep -r | grep vs current find solution
+- add github ci support
+	- one example: https://github.com/avaris/pelican/actions/runs/90560727
 
-### Repository organization
-- Each user file could be seen as a user log, where all it's actions appear, including likes, replies, etc. This allows to easily sign it, back it up, etc. Although, because we're using Git, this log is implicitly available... We could have a different file for each type of data.
-```
-network/
-	user1/
-		posts
-		replies
-		likes
-		follows
-```
-
-### File format
-All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
-
-- Delete posts or replies with an empty line.
-
-- Each line represents the id of the posts/reply? This seems too fragile to me, maybe an improvement would be to use a partial hash...
-
-- posts candidate format (csv with \t as delimiter)
-```
-La primera linea y si hay mas pues implemente pongo \n que luego se traducen y listo. Si quisiera escribir \\n literal, pues simplemente hay que traducir antes y despues. Lo importante es que lo del principio es facilmente parseable.
-
-La primera linea (siempre una linea en blanco entre mensajes)
-```
-- replies candidate format (use a kind of csv with \t delimiters)
-```
-reply-id	user-1	post-2	Una respuesta larga usando \n para multiples lineas, ya se que no va a haber nada mas aqui.
-reply-id	user-2	post-4	Una respuesta corta.
-```
-- likes candidate format (one like per line, separate with \t)
-```
-user-2	post-4
-user-1	post-1
-```
-- follows candidate format (one per line, only follows, not unfollows, that's in Git).
-```
-user-2
-user-1
-```
 ## Future improvements
-- Terminal video showing how the network works
+- `log`: default to a given number of days to show (eg. 7 days)
+- `log`: option to use default pager
+- `show`: allow relative message id (-1 = latest message, etc.)
+- use colors in the terminal
 - each user could post to its own file (no conflicts with other users, just append)
 - post id = commit id? alternative postid per user
-- **sn reply**
+- **sn reply**: reply to message (also allowing relative id)
 - **sn log** should probably limit the size shown, and refer to sn show if you want to see the whole message... probably using git log, filtering and selectiing what data to show.
 - sign each message... or the username file, to verify you're the only one who can write in the username file.
 - **sn edit**: a command to edit one of your messages.
+- **sn delete**: a command to delete one of your messages.
 - **sn merge**: merge two networks.

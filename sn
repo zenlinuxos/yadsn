@@ -9,7 +9,7 @@ CMDNAME=${0##*/}
 
 main() {
 	command -v git >/dev/null 2>&1 \
-		|| die "Git must be installed to use this program."
+		|| die "Git must be installed to use this program"
 
 	# shellcheck disable=2015
 	[ $# -ge 1 ] && [ "$1" != "--help" ] || usage
@@ -51,6 +51,15 @@ main() {
 			network="$1"
 			username="${username:-$USER}"
 			cmd_create
+		;;
+
+		join)
+			[ -n "${1:-}" ] || die "Missing required Git URL"
+			[ "$#" -gt 2 ] && die "Too many arguments"
+			network_url="$1"
+			network="${2:-$(extract_network_from_url "$network_url")}"
+			username="${username:-$USER}"
+			cmd_join
 		;;
 
 		post)
@@ -98,6 +107,11 @@ Commands
 		Create a new local network. -n does not apply, but -u can be used to
 		define what username to use by default in that network.
 
+	join <git-url> [<network-name>]
+		Joins a remote network identified by a Git URL. If <network-name> is
+		provided, it will be usually to identify the network locally.
+		Otherwise, the network name is deduced from the URL.
+
 	members
 		Shows a list of users in the network.
 
@@ -129,6 +143,11 @@ clean() {
 	[ -e "${tmpfile:-}" ] && rm -f "$tmpfile" >/dev/null 2>&1
 }
 
+extract_network_from_url() {
+	# remove all until the first / (included) and the .git suffix (if present)
+	echo "${1##*/}" | sed 's/\.git$//'
+}
+
 get_config() {
 	network=$1
 	variable=$2
@@ -144,9 +163,9 @@ get_users() {
 }
 
 get_networks() {
-	find "$SN_DATA" -type d ! -path '*.git*' \
-						-a ! -path "$SN_DATA"\
-						-a ! -path "$SN_DATA/*/*"
+	find "$(data_dir)" -type d ! -path '*.git*' \
+		-a ! -path "$(data_dir)"\
+		-a ! -path "$(data_dir)/*/*"
 }
 
 get_default_network() {
@@ -212,7 +231,18 @@ cmd_create() {
 	git init > /dev/null
 	add_user
 	echo "${network}_username=$username" >> "$(config_file)"
-	echo "Created network '$network'. Joined as '$USER'."
+	echo "Created network '$network'. Joined as '$username'."
+}
+
+cmd_join() {
+	[ -d "$(network_dir "$network")" ] \
+		&& die "A network named '$network' already exists"
+	git clone "$network_url" "$(network_dir "$network")" >/dev/null \
+		|| die "Cloning remote Git repository"
+	cd "$(network_dir "$network")" \
+		|| die "Unable to change into network directory"
+	add_user
+	echo "Joined network '$network' as user '$username'."
 }
 
 cmd_members() {

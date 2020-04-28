@@ -1,5 +1,9 @@
+data_dir() {
+	echo "$SN_DATA"
+}
+
 config_file() {
-	echo "${SN_DATA}/config"
+	echo "$(data_dir)/config"
 }
 
 posts_file() {
@@ -11,5 +15,5 @@ likes_file() {
 }
 
 network_dir() {
-	echo "${SN_DATA}/$1"
+	echo "$(data_dir)/$1"
 }

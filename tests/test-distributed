@@ -1,0 +1,72 @@
+#!/bin/sh
+
+# NOTE: assert_output uses multiple lines to avoid subshell last newline
+# 	trimming
+
+. lib/globals.sh
+
+sn="$(dirname "$(dirname "$0")")/sn"
+
+setup() {
+	mkdir -p "$ts_test_dir"
+	export SN_DATA="$ts_test_dir/sn_data"
+}
+
+teardown() {
+	rm -r "$ts_test_dir"
+}
+
+error() {
+	echo "Error: $1"
+	exit 1
+}
+
+create_remote() {
+	network="$1"
+	network_url="$ts_test_dir/$network"
+	( mkdir -p "$network_url" ; cd "$network_url" || exit ; git init ; )
+}
+
+###########
+# sn join #
+###########
+
+test_join() {
+	create_remote "remote-network"
+	$sn join "$network_url"
+	assert_status 0 $?
+	[ -d "$SN_DATA/$network/.git" ] || error "Git repository not initialized"
+	$sn members | grep "$USER"
+}
+
+test_join_extracts_network_name_from_url() {
+	create_remote "remotes/subdir/test.git"
+	$sn join "$network_url" | assert_output "\
+Joined network 'test' as user '""$USER""'.
+"
+}
+
+test_join_fail_no_args() {
+	$sn join 2>&1 | grep "Error: Missing required Git URL"
+}
+
+test_join_fail_invalid_url() {
+	$sn join invalid_url network 2>&1 \
+		| grep "Error: Cloning remote Git repository"
+}
+
+test_join_fail_too_many_parameters() {
+	$sn join url network toomany 2>&1 \
+		| grep "Error: Too many arguments"
+}
+
+test_join_fail_existing_local() {
+	$sn create test-network
+	$sn join "$ts_test_dir/nonexisting.git" test-network
+	assert_status 1 $?
+}
+
+export TS_COLOR="true"
+#export TS_DEBUG="true"
+
+. tests/ts
