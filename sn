@@ -215,6 +215,12 @@ add_user() {
 	create_file "$username/$(posts_file)"
 	git add "$username" >/dev/null
 	git_commit "User '$username' joined"
+	# add as default user only if it's the first user added
+	# locally. For example, currently it's allowed to post as any
+	# user or you could change the value in the config file.
+	if ! grep "^${network}_username=" "$(config_file)" ; then
+		echo "${network}_username=$username" >> "$(config_file)"
+	fi
 }
 
 # pre: working directory is a valid network with a git repository
@@ -234,7 +240,6 @@ cmd_create() {
 		|| die "Unable to change into network directory"
 	git init > /dev/null
 	add_user
-	echo "${network}_username=$username" >> "$(config_file)"
 	echo "Created network '$network'. Joined as '$username'."
 }
 

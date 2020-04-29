@@ -39,6 +39,12 @@ test_join() {
 	$sn members | grep "$USER"
 }
 
+test_join_default_user() {
+	create_remote "remote-network"
+	$sn join "$network_url"
+	grep "remote-network_username=$USER" "$(config_file)"
+}
+
 test_join_extracts_network_name_from_url() {
 	create_remote "remotes/subdir/test.git"
 	$sn join "$network_url" | assert_output "\
