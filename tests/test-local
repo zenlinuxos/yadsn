@@ -138,6 +138,13 @@ test_post_default_network() {
 # sn log #
 ##########
 
+test_log_empty_network() {
+	test_create
+	$sn log | wc -l | assert_output "\
+0
+"
+}
+
 test_log_one_user() {
 	test_create
 	for i in $(seq 0 9); do

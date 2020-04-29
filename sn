@@ -275,6 +275,7 @@ cmd_post() {
 
 format_log() {
 	while read -r line ; do
+		[ -z "$line" ] && continue
 		msg_id="$(echo "$line" | cut -f3)"
 		printf "[%s | #%s | ❤️%s] @%s: %s\n" \
 			"$(echo "$line" | cut -f1 | \
