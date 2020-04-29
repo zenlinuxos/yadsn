@@ -24,7 +24,27 @@ error() {
 create_remote() {
 	network="$1"
 	network_url="$ts_test_dir/$network"
-	( mkdir -p "$network_url" ; cd "$network_url" || exit ; git init ; )
+	( mkdir -p "$network_url" ; cd "$network_url" || exit ; git init --bare; )
+}
+
+check_remote_has_changes() {
+	network="$1"
+	network_url="$ts_test_dir/$network"
+	( cd "$network_url" || exit ; git log --oneline | grep "joined" )
+}
+
+update_remote() {
+	tmp_network="$1"
+	tmp_network_url="$ts_test_dir/${tmp_network}"
+	tmp_cloned_url="$ts_test_dir/${tmp_network}-clone"
+	(
+	  git clone "$tmp_network_url" "$tmp_cloned_url"
+	  cd "$tmp_cloned_url" || exit
+	  echo test > file
+	  git add file
+	  git commit -m "test"
+	  git push
+	)
 }
 
 ###########
@@ -71,6 +91,30 @@ test_join_fail_existing_local() {
 	$sn join "$ts_test_dir/nonexisting.git" test-network
 	assert_status 1 $?
 }
+
+###########
+# sn push #
+###########
+
+test_push() {
+	create_remote "remote-network"
+	# this automatically adds our user to the network
+	$sn join "$network_url"
+	$sn post test message
+	$sn push
+	check_remote_has_changes "remote-network"
+}
+
+test_push_updated_remote() {
+	create_remote "remote-network"
+	$sn join "$network_url"
+	update_remote "remote-network"
+	$sn post test message
+	$sn push 2>&1 | head -1 | assert_output "\
+Error: Can't push local changes, try 'pull' first
+"
+}
+
 
 export TS_COLOR="true"
 #export TS_DEBUG="true"

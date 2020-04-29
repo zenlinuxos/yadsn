@@ -51,6 +51,7 @@ network/
 - [What characters should I use or not use in usernames on Linux?](https://serverfault.com/questions/73084/what-characters-should-i-use-or-not-use-in-usernames-on-linux)
 	- POSIX.1-2008: [a-zA-Z0-9._-]
 - Scuttlebutt uses cryptography to resolve the problem of a global name by using your public key as your id. The name is just an alias to your key, and so it's not unique.
+	- If we wanted to obly assure that each user can use whatever name he wants, we could use a some kind of hashing to generate a unique value and save the user name in the repo (so others can see it, maybe even as part of the folder name).
 
 ### Network creation and join
 - what if I create a sn and then join another with the same name?
@@ -63,6 +64,7 @@ network/
 ## TODO
 - create: prompt user for what username they would like to use in this network
 	- this would be solved if we used key-based identification
+- join: handle username already taken when joining (prompt for alternative name)
 - push: changes to remote social network
 - push:pre-push validations to mantain network data integrity
 	- force pull if remote has changed
@@ -75,6 +77,7 @@ network/
 	- one example: https://github.com/avaris/pelican/actions/runs/90560727
 
 ## Future improvements
+- `leave`: removes a network from local data and updates config
 - `log`: default to a given number of days to show (eg. 7 days)
 - `log`: option to use default pager
 - `show`: allow relative message id (-1 = latest message, etc.)

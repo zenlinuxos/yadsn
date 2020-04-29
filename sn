@@ -17,6 +17,9 @@ main() {
 	[ -d "${SN_DATA:=$HOME/.sn}" ] || mkdir -p "${SN_DATA}" \
 		|| die "Creating sn data directory"
 
+	[ -f "$(config_file)" ] || touch "$(config_file)" \
+		|| die "Creating config file"
+
 	network=
 	username=
 	while getopts n:u:h option ; do
@@ -60,6 +63,11 @@ main() {
 			network="${2:-$(extract_network_from_url "$network_url")}"
 			username="${username:-$USER}"
 			cmd_join
+		;;
+
+		push)
+			[ -n "$network" ] || die "No default network defined in config"
+			cmd_push
 		;;
 
 		post)
@@ -111,6 +119,10 @@ Commands
 		Joins a remote network identified by a Git URL. If <network-name> is
 		provided, it will be usually to identify the network locally.
 		Otherwise, the network name is deduced from the URL.
+
+	push
+		Push locally made changes to the remote Git repository. This command
+		is only valid if the network was created using the 'join' command.
 
 	members
 		Shows a list of users in the network.
@@ -206,10 +218,11 @@ get_likes() {
 
 git_commit() {
 	commit_msg=$1
+	# allow date forging for testing purposes
 	commit_date=${SN_TEST_NOW:-}
 	[ -n "$commit_date" ] && commit_date="--date $commit_date"
 	# shellcheck disable=2086
-	git commit -m "$commit_msg" $commit_date >/dev/null
+	git commit -q -m "$commit_msg" $commit_date
 }
 
 # pre: working directory is a valid network with a git repository
@@ -242,7 +255,7 @@ cmd_create() {
 	mkdir -p "$(network_dir "$network")" || die "Creating network directory"
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
-	git init > /dev/null
+	git init -q
 	add_user
 	echo "Created network '$network'. Joined as '$username'."
 }
@@ -250,12 +263,23 @@ cmd_create() {
 cmd_join() {
 	[ -d "$(network_dir "$network")" ] \
 		&& die "A network named '$network' already exists"
-	git clone "$network_url" "$(network_dir "$network")" >/dev/null \
+	git clone "$network_url" "$(network_dir "$network")" \
 		|| die "Cloning remote Git repository"
 	cd "$(network_dir "$network")" \
 		|| die "Unable to change into network directory"
 	add_user
 	echo "Joined network '$network' as user '$username'."
+}
+
+cmd_push() {
+	[ -n "$(git remote)" ] || die "Can't push local-only network"
+	# we are conservative here and don't reset any local changes in the
+	# local Git repository of the network
+	[ -z "$(git status -s)" ] || die "Network has local unknown changes!"
+	git push --dry-run 2>/dev/null 1>&2 \
+		|| die "Can't push local changes, try 'pull' first"
+	git push
+	echo "Pushed local network changes to remote"
 }
 
 cmd_members() {
