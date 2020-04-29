@@ -168,7 +168,10 @@ get_config() {
 	network=$1
 	variable=$2
 	[ -f "$(config_file)" ] || { echo "" ; return ; }
-	awk -F= "/^${network}_${variable}/ { print \$2 }" "$(config_file)"
+	while IFS='=' read -r key val ; do
+		[ "$key" = "${network}_${variable}" ] && { echo "$val" ; return ; }
+	done < "$(config_file)"
+	echo ""
 }
 
 # pre: working directory is a valid network with a git repository
@@ -302,17 +305,19 @@ cmd_post() {
 }
 
 format_log() {
+	local_format="$(time_format)"
 	while read -r line ; do
 		[ -z "$line" ] && continue
 		msg_id="$(echo "$line" | cut -f3)"
 		printf "[%s | #%s | ❤️%s] @%s: %s\n" \
 			"$(echo "$line" | cut -f1 | \
-				sed 's/.*/@&/' | xargs -n1 date +"$(time_format)" -d)" \
+				sed 's/.*/@&/' | xargs -n1 date +"$local_format" -d)" \
 			"$(echo "$line" | cut -f3)" \
 			"$(get_likes "$msg_id")" \
 			"$(echo "$line" | cut -f2)" \
 			"$(echo "$line" | cut -f4-)"
 	done
+	unset local_format
 }
 
 cmd_log() {

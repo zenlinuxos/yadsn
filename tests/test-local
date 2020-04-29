@@ -213,6 +213,12 @@ test_log_quoted_messages() {
 	assert_status 0 $?
 }
 
+test_log_default_time_format() {
+	test_create
+	$sn post "example text"
+	$sn log | grep "^\[$(date +'%b %d %R') |"
+}
+
 test_log_time_format() {
 	test_create
 	$sn post "example text"
