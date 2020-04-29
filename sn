@@ -35,7 +35,7 @@ main() {
 	username="${username:=$(get_config "$network" username)}"
 
 	if [ -n "$network" ]; then
-		cd "$(network_dir "$network")" \
+		cd "$(network_dir "$network")" 2>/dev/null \
 			|| die "Unable to change into network directory"
 	fi
 
@@ -167,19 +167,23 @@ get_users() {
 }
 
 get_networks() {
+	# we don't use -maxdepth because it's not POSIX standard
 	find "$(data_dir)" -type d ! -path '*.git*' \
 		-a ! -path "$(data_dir)"\
 		-a ! -path "$(data_dir)/*/*"
 }
 
 get_default_network() {
-	# we don't use -maxdepth because it's not POSIX standard
+	default_network=$(get_config default network)
+	if [ -n "$default_network" ]; then
+		echo "$default_network"
+		return
+	fi
 	networks=$(get_networks)
 	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
 		echo "${networks##*/}"
 	else
-		default_network=$(get_config default network)
-		echo "$default_network"
+		echo ""
 	fi
 }
 

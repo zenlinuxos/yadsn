@@ -134,6 +134,18 @@ test_post_default_network() {
 	assert_status 0 $?
 }
 
+test_post_invalid_default_network() {
+	test_create
+	$sn -n invalid post test message 2>&1 | head -1 | assert_output "\
+Error: Unable to change into network directory
+"
+	echo "default_network=invalid" >> "$(config_file)"
+	$sn post test message
+	$sn post test message 2>&1 | head -1 | assert_output "\
+Error: Unable to change into network directory
+"
+}
+
 ##########
 # sn log #
 ##########
