@@ -33,20 +33,6 @@ check_remote_has_changes() {
 	( cd "$network_url" || exit ; git log --oneline | grep "joined" )
 }
 
-update_remote() {
-	tmp_network="$1"
-	tmp_network_url="$ts_test_dir/${tmp_network}"
-	tmp_cloned_url="$ts_test_dir/${tmp_network}-clone"
-	(
-	  git clone "$tmp_network_url" "$tmp_cloned_url"
-	  cd "$tmp_cloned_url" || exit
-	  echo test > file
-	  git add file
-	  git commit -m "test"
-	  git push
-	)
-}
-
 ###########
 # sn join #
 ###########
@@ -107,12 +93,27 @@ test_push() {
 
 test_push_updated_remote() {
 	create_remote "remote-network"
-	$sn join "$network_url"
-	update_remote "remote-network"
-	$sn post test message
-	$sn push 2>&1 | head -1 | assert_output "\
+	$sn -u user1 join "$network_url" remote1 || error "join1"
+	$sn -u user2 join "$network_url" remote2 || error "join2"
+	$sn -n remote1 push || error "post"
+	$sn -n remote2 post other message || error "post"
+	$sn -n remote2 push 2>&1 | head -1 | assert_output "\
 Error: Can't push local changes, try 'pull' first
 "
+}
+
+###########
+# sn push #
+###########
+
+test_pull() {
+	create_remote "remote-network"
+	$sn join "$network_url" remote1 || error "join1"
+	$sn join "$network_url" remote2 || error "join2"
+	$sn -n remote1 post test message || error "post1"
+	$sn -n remote1 push || error "push1"
+	$sn -n remote2 pull || error "pull2"
+	$sn -n remote2 log | grep "test message"
 }
 
 

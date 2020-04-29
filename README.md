@@ -51,6 +51,7 @@ network/
 - [What characters should I use or not use in usernames on Linux?](https://serverfault.com/questions/73084/what-characters-should-i-use-or-not-use-in-usernames-on-linux)
 	- POSIX.1-2008: [a-zA-Z0-9._-]
 - Scuttlebutt uses cryptography to resolve the problem of a global name by using your public key as your id. The name is just an alias to your key, and so it's not unique.
+	- https://handbook.scuttlebutt.nz/concepts/identity
 	- If we wanted to obly assure that each user can use whatever name he wants, we could use a some kind of hashing to generate a unique value and save the user name in the repo (so others can see it, maybe even as part of the folder name).
 
 ### Network creation and join
@@ -62,6 +63,7 @@ network/
 - It's a must to be able to work locally, without a connection. This means you have to be able to create a local network (aka, git repository).
 
 ## TODO
+- pull: allow the user to decide what changes to keep in case of conflict.
 - create: prompt user for what username they would like to use in this network
 	- this would be solved if we used key-based identification
 - join: handle username already taken when joining (prompt for alternative name)

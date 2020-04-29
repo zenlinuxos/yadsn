@@ -65,20 +65,16 @@ main() {
 			cmd_join
 		;;
 
-		push)
-			[ -n "$network" ] || die "No default network defined in config"
-			cmd_push
-		;;
-
 		post)
 			[ -n "$network" ] || die "No default network defined in config"
 			[ -n "$username" ]|| die "Unknown username to use in '$network'"
 			cmd_post "$@"
 		;;
 
-		log|members)
+		log|members|push|pull)
 			[ -n "$network" ] || die "No default network defined in config"
-			"cmd_$cmd" "$@"
+			[ "$#" -eq 0 ] || die "Too many arguments"
+			"cmd_$cmd"
 		;;
 
 		show|like)
@@ -123,6 +119,11 @@ Commands
 	push
 		Push locally made changes to the remote Git repository. This command
 		is only valid if the network was created using the 'join' command.
+
+	pull
+		Pull remote changes into local network repository. It tries to rebase
+		your changes on top of any other change in the remote repository. It
+		fails in case of conflict.
 
 	members
 		Shows a list of users in the network.
@@ -278,11 +279,20 @@ cmd_push() {
 	[ -n "$(git remote)" ] || die "Can't push local-only network"
 	# we are conservative here and don't reset any local changes in the
 	# local Git repository of the network
-	[ -z "$(git status -s)" ] || die "Network has local unknown changes!"
+	[ -z "$(git status -s)" ] || die "Network directory has unknown changes!"
 	git push --dry-run 2>/dev/null 1>&2 \
 		|| die "Can't push local changes, try 'pull' first"
 	git push
 	echo "Pushed local network changes to remote"
+}
+
+cmd_pull() {
+	[ -n "$(git remote)" ] || die "Can't pull local-only network"
+	# we are conservative here and don't reset any local changes in the
+	# local Git repository of the network
+	[ -z "$(git status -s)" ] || die "Network directory has unknown changes!"
+	git pull --rebase
+	echo "Pulled changes from remote"
 }
 
 cmd_members() {
