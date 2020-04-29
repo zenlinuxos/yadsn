@@ -250,7 +250,7 @@ cmd_join() {
 }
 
 cmd_members() {
-	get_users
+	get_users | sed 's/.*/@&/'
 }
 
 cmd_post() {

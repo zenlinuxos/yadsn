@@ -86,6 +86,13 @@ test_members() {
 "
 }
 
+test_members_format() {
+	test_create
+	$sn members | assert_output "\
+@$USER
+"
+}
+
 ###########
 # sn post #
 ###########
