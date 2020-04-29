@@ -127,8 +127,6 @@ test_post_default_network() {
 	assert_status 0 $?
 }
 
-# TODO: Multiline messages
-
 ##########
 # sn log #
 ##########
@@ -187,6 +185,13 @@ test_log_quoted_messages() {
 	$sn post "Message \"with\" some \"quotes\""
 	$sn log | grep "Message \"with\" some \"quotes\""
 	assert_status 0 $?
+}
+
+test_log_time_format() {
+	test_create
+	$sn post "example text"
+	echo "default_time_format=%Y" >> "$(config_file)"
+	$sn log | grep "^\[$(date +%Y) |"
 }
 
 ###########

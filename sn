@@ -148,6 +148,10 @@ extract_network_from_url() {
 	echo "${1##*/}" | sed 's/\.git$//'
 }
 
+time_format() {
+	get_config "default" "time_format" | sed 's/^$/%b %d %R/'
+}
+
 get_config() {
 	network=$1
 	variable=$2
@@ -268,7 +272,8 @@ format_log() {
 	while read -r line ; do
 		msg_id="$(echo "$line" | cut -f3)"
 		printf "[%s | #%s | ❤️%s] @%s: %s\n" \
-			"$(echo "$line" | cut -f1 | sed 's/.*/@&/' | xargs -n1 date +'%x %R' -d)" \
+			"$(echo "$line" | cut -f1 | \
+				sed 's/.*/@&/' | xargs -n1 date +"$(time_format)" -d)" \
 			"$(echo "$line" | cut -f3)" \
 			"$(get_likes "$msg_id")" \
 			"$(echo "$line" | cut -f2)" \
@@ -308,7 +313,7 @@ cmd_show() {
 	# trick: don't use $() to be able to access function msg_* variables here
 	get_message_data >/dev/null
 	printf "[%s | %s] by @%s (❤️%s)\n\n" \
-		"$(date +'%x %R' -d @"$msg_date")" \
+		"$(date +"$(time_format)" -d @"$msg_date")" \
 		"#$msg_short_id" \
 		"$msg_user" \
 		"$(get_likes "$msg_full_id")"

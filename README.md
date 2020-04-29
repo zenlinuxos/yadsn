@@ -14,6 +14,7 @@ TODO
 network_name_username=...
 network_name_signing_key=...
 
+- `default_time_format`: Defines the time format to use when displaying dates. See `date` command for reference. Default value: "%b %d %R".
 
 ## Software design
 
