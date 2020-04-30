@@ -5,11 +5,11 @@
 
 . lib/globals.sh
 
-sn="$(dirname "$(dirname "$0")")/sn"
+sn="$(dirname "$(dirname "$0")")/yadsn"
 
 setup() {
 	mkdir -p "$ts_test_dir"
-	export SN_DATA="$ts_test_dir"
+	export YADSN_DATA="$ts_test_dir"
 }
 
 teardown() {
@@ -40,7 +40,7 @@ test_create() {
 	network="test-network"
 	$sn create "$network"
 	assert_status 0 $?
-	[ -d "$SN_DATA/$network/.git" ] || error "Git repository not initialized"
+	[ -d "$YADSN_DATA/$network/.git" ] || error "Git repository not initialized"
 }
 
 test_create_too_many_parameters() {
@@ -61,13 +61,13 @@ test_create_default_username_in_config() {
 	assert_status 0 $?
 	assert_output "\
 test-network_username=$USER
-" < "$SN_DATA/config"
+" < "$YADSN_DATA/config"
 }
 
 test_create_default_username_in_repository() {
 	test_create
 	assert_status 0 $?
-	test -e "$SN_DATA/$network/$USER"
+	test -e "$YADSN_DATA/$network/$USER"
 	assert_status 0 $?
 }
 
@@ -102,9 +102,9 @@ test_post() {
 	message="post this is a very long message in the same line"
 	$sn -n "$network" post "$message"
 	assert_status 0 $?
-	grep -r "$message" "$SN_DATA/$network"
+	grep -r "$message" "$YADSN_DATA/$network"
 	assert_status 0 $?
-	cd "$SN_DATA/$network" || exit 1
+	cd "$YADSN_DATA/$network" || exit 1
 	git log | grep -q "User.*added"
 	assert_status 0 $?
 }
@@ -120,7 +120,7 @@ test_post_empty_message() {
 	sleep 1
 	kill -9 "$(ps -Af | awk "{if (\$3 == $!) print \$2}")"
 	assert_status 0 $?
-	wc -l "$SN_DATA/$network/$USER/$(posts_file)" | cut -f1 -d' ' | assert_output "\
+	wc -l "$YADSN_DATA/$network/$USER/$(posts_file)" | cut -f1 -d' ' | assert_output "\
 0
 "
 }
@@ -130,7 +130,7 @@ test_post_default_network() {
 	message="post this is a very long message in the same line"
 	$sn post "$message" | grep "$network"
 	assert_status 0 $?
-	grep -r "$message" "$SN_DATA/$network/$USER"
+	grep -r "$message" "$YADSN_DATA/$network/$USER"
 	assert_status 0 $?
 }
 
@@ -256,7 +256,7 @@ test_like() {
 	message_id="$($sn log | tail +10 | grep -o '#[0-9a-z]*')"
 	message_id="${message_id###}"
 	$sn like "$message_id"
-	grep "^\"$message_id" "$SN_DATA/$network/$USER/$(likes_file)"
+	grep "^\"$message_id" "$YADSN_DATA/$network/$USER/$(likes_file)"
 	assert_status 0 $?
 }
 

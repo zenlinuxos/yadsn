@@ -18,4 +18,4 @@ test: $(TS_CMD)
 
 linter:
 	@echo "Running linter..."
-	@shellcheck -x -s sh tests/test-* sn
+	@shellcheck -x -s sh tests/test-* yadsn

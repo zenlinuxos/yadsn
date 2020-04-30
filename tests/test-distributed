@@ -5,11 +5,11 @@
 
 . lib/globals.sh
 
-sn="$(dirname "$(dirname "$0")")/sn"
+sn="$(dirname "$(dirname "$0")")/yadsn"
 
 setup() {
 	mkdir -p "$ts_test_dir"
-	export SN_DATA="$ts_test_dir/sn_data"
+	export YADSN_DATA="$ts_test_dir/data"
 }
 
 teardown() {
@@ -41,7 +41,7 @@ test_join() {
 	create_remote "remote-network"
 	$sn join "$network_url"
 	assert_status 0 $?
-	[ -d "$SN_DATA/$network/.git" ] || error "Git repository not initialized"
+	[ -d "$YADSN_DATA/$network/.git" ] || error "Git repository not initialized"
 	$sn members | grep "$USER"
 }
 

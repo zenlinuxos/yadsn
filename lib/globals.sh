@@ -1,5 +1,5 @@
 data_dir() {
-	echo "$SN_DATA"
+	echo "$YADSN_DATA"
 }
 
 config_file() {
