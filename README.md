@@ -1,28 +1,127 @@
-# sn (social-network)
+# yadsn (yet another distributed social network)
 
-sn (social-network) is a Git-based decentralized social network written in shell. It should run on any POSIX shells.
+![GitHub](https://img.shields.io/github/license/davidag/yadsn)
+
+yadsn (yet another distributed social network) is a Git-based decentralized social network written in the shell command language. It should run on any POSIX shells. It is alpha-status software and so it should not be used with data that matters to you in any possible way.
+
+It has the following features:
+
+* Command-line application written in pure shell.
+* It can be used without being connected to the Internet.
+* Social networks as Git repositories.
 
 ## Installation
+
+### For users
+
+1. Supposing `~/bin` is in your `$PATH`, download the yadsn script on it using e.g. wget:
+
+	wget -O ~/bin/yadsn https://github.com/davidag/yadsn/raw/master/yadsn
+	chmod +x ~/bin/yadsn
+
+2. Follow the quick tutorial or read all possible commands.
+
+### For development
+
+1. Clone this repository: `git clone https://github.com/davidag/yadsn.git`
+2. Enter local copy: `cd yadsn`
+3. Create feature branch: `git checkout -b my-feature`
+4. Verify tests pass: `make`
+5. Code your feature
+6. Verify tests pass: `make`
+7. Push feature branch and submit PR: `git push`
+
+### Portability and testing
+
+yadsn has been only tested on Linux, but it should work on any other *Nix-like system, possibly including Cygwin on Windows.
+
+### Requirements
+
+For users:
+
+* *Git* is required for basic operation.
+* GNU programs: *find*, *grep*, *sed*, *wc*, *xargs*, *mktemp*.
+
+For yadsn development:
+
+* *wget* is used to download the *ts* shell testing utility in the `test/` directory.
+	* [ts](https://github.com/thinkerbot/ts) (test script), a test framework for testing shell scripts (POSIX-only).
 
 ## Quick tutorial
 TODO
 
 ## Usage
 
+### Configuration
 
-## Configuration
-network_name_username=...
-network_name_signing_key=...
+yadsn saves all network and configuration data in a directory defined in the `$YADSN_DATA` shell variable. By default, this directory corresponds to: `~/.yadsn`
 
-- `default_time_format`: Defines the time format to use when displaying dates. See `date` command for reference. Default value: "%b %d %R".
+yadsn uses a INI-like configuration file which resides in `$YADSN_DATA/config` and can contain the following variables:
+
+* `networkname_username`: When a user creates or joins a network, a new entry of this type is added. The default username is `$USER`.
+
+* `default_time_format`: Defines the time format to use when displaying dates. See `date` command for reference. Default value: "%b %d %R".
+
+### Commands
+
+```
+Usage: yadsn [global-options] <command>
+
+Global options
+
+	-n network-name: If not provided, and there is only one network in the
+		data directory, this is automatically selected. If there is more than
+		one, the variable 'default_network' from the config file is used.
+
+	-u username: The username to use when executing the command. If none is
+		provided, the variable '<network-name>_username' from the config file is
+		used (see -n for how <network-name> is selected).
+
+Commands
+
+	create <network-name>
+		Create a new local network. -n does not apply, but -u can be used to
+		define what username to use by default in that network.
+
+	join <git-url> [<network-name>]
+		Joins a remote network identified by a Git URL. If <network-name> is
+		provided, it will be usually to identify the network locally.
+		Otherwise, the network name is deduced from the URL.
+
+	push
+		Push locally made changes to the remote Git repository. This command
+		is only valid if the network was created using the 'join' command.
+
+	pull
+		Pull remote changes into local network repository. It tries to rebase
+		your changes on top of any other change in the remote repository. It
+		fails in case of conflict.
+
+	members
+		Shows a list of users in the network.
+
+	log
+		Show posts, most recent first. Only the first line of each message is
+		shown, with an ellipsis representing messages with more than one line.
+
+	post [<message>]
+		Post a message in a network. No quotation necessary. If no text is
+		provided the default editor is used to input the message.
+
+	show <message-id>
+		Shows a message along all its associated information. The message id
+		can be obtained with the 'log' command.
+
+	like <message-id>
+		Like a message. The message id can be obtained with the 'log' command.
+```
 
 ## Software design
 
-### File format
-All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
+### Network repository
 
-### Repository organization
-- Each user file could be seen as a user log, where all it's actions appear, including likes, replies, etc. This allows to easily sign it, back it up, etc. Although, because we're using Git, this log is implicitly available... We could have a different file for each type of data.
+There is one Git repository per social network you have created or joined to.
+
 ```
 network/
 	user1/
@@ -31,64 +130,11 @@ network/
 		likes
 		follows
 ```
-- repository organization
-	- one repo per social network or one repo for all social networks?
-		- it's clearly one repo pero social network...
-		- this means there must be a way to know on what sn the command applies... sn -s social-network-name (if only one, use that by default).
-- what should make do by default?
 
-### Username
-- Username? Same as configured in git? username in the social network you're writing to? (I guess any centralized repository requires some kind of authentication)
-	- Username = $USER
-- Username duplicates? what if you join a social network and there's someone with your name?
-	- we could use the e-mail as id, but that's not privacy-friendly.
-	- we could ask the user for its name when creating a social network and
-	  then the username would be `username@social-network-name`
-	- when you join a network, if there's already a username there, ask the user for another name.
-	- if pushing changes and there's a conflict in the username file, this means someone else has posted a message...  (SIGNING)
-- [Usernames in LDAP GitHub integration](https://help.github.com/en/enterprise/2.16/admin/user-management/using-ldap#username-considerations-with-ldap)
-	- Restricted to alphanumeric and dashes.
-- [What characters should I use or not use in usernames on Linux?](https://serverfault.com/questions/73084/what-characters-should-i-use-or-not-use-in-usernames-on-linux)
-	- POSIX.1-2008: [a-zA-Z0-9._-]
-- Scuttlebutt uses cryptography to resolve the problem of a global name by using your public key as your id. The name is just an alias to your key, and so it's not unique.
-	- https://handbook.scuttlebutt.nz/concepts/identity
-	- If we wanted to obly assure that each user can use whatever name he wants, we could use a some kind of hashing to generate a unique value and save the user name in the repo (so others can see it, maybe even as part of the folder name).
+### File format
 
-### Network creation and join
-- what if I create a sn and then join another with the same name?
-	- sn create name (check only ascii chars, force one argument, try mkdir fail if not)
-	- sn join name
-		- if it already exists, just add it as remote and try to pull changes rebasing
-- what if I create a sn and then join another with a different name?
-- It's a must to be able to work locally, without a connection. This means you have to be able to create a local network (aka, git repository).
+All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
 
-## TODO
-- pull: allow the user to decide what changes to keep in case of conflict.
-- create: prompt user for what username they would like to use in this network
-	- this would be solved if we used key-based identification
-- join: handle username already taken when joining (prompt for alternative name)
-- push: changes to remote social network
-- push:pre-push validations to mantain network data integrity
-	- force pull if remote has changed
-	- allow changes only in the last lines of files
-	- one commit per line changed
-- pull: retrieve changes from remote social network
-- add test-performance using a data generator
-	- `get_likes` using grep -r | grep vs current find solution
-- add github ci support
-	- one example: https://github.com/avaris/pelican/actions/runs/90560727
+## License
 
-## Future improvements
-- `leave`: removes a network from local data and updates config
-- `log`: default to a given number of days to show (eg. 7 days)
-- `log`: option to use default pager
-- `show`: allow relative message id (-1 = latest message, etc.)
-- use colors in the terminal
-- each user could post to its own file (no conflicts with other users, just append)
-- post id = commit id? alternative postid per user
-- **sn reply**: reply to message (also allowing relative id)
-- **sn log** should probably limit the size shown, and refer to sn show if you want to see the whole message... probably using git log, filtering and selectiing what data to show.
-- sign each message... or the username file, to verify you're the only one who can write in the username file.
-- **sn edit**: a command to edit one of your messages.
-- **sn delete**: a command to delete one of your messages.
-- **sn merge**: merge two networks.
+GNU GPL-v3
