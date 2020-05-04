@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Git configuration
+      shell: bash
+      run: |
+        git config --global user.email "name@example.com"
+        git config --global user.name "Name"
+
+    - name: Display environment variables
+      shell: sh
+      run: env
+
+    - name: Linter
+      shell: sh
+      run: make linter
+
+    - name: Tests
+      shell: sh
+      run: make tests

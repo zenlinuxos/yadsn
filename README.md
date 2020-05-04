@@ -1,6 +1,5 @@
 # yadsn (yet another distributed social network)
-
-![GitHub](https://img.shields.io/github/license/davidag/yadsn)
+![CI](https://github.com/davidag/yadsn/workflows/CI/badge.svg) ![GitHub](https://img.shields.io/github/license/davidag/yadsn)
 
 yadsn (yet another distributed social network) is a Git-based decentralized social network written in the shell command language. It should run on any POSIX shells. It is alpha-status software and so it should not be used with data that matters to you in any possible way.
 
