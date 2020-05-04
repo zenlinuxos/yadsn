@@ -137,4 +137,6 @@ All network-related files follow the CSV standard defined in RFC... except for n
 
 ## License
 
-GNU GPL-v3
+Copyright (C) David Alfonso
+
+All code is licensed under the GPL-3.0-or-later.
