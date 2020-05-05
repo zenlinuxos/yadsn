@@ -94,6 +94,11 @@ main() {
 			"cmd_$cmd"
 		;;
 
+		networks)
+			[ "$#" -eq 0 ] || die "Too many arguments"
+			cmd_networks
+		;;
+
 		show|like)
 			[ -n "$network" ] || die "No default network defined in config"
 			user_msg_id="${1:-}"
@@ -142,6 +147,9 @@ Commands
 		your changes on top of any other change in the remote repository. It
 		fails in case of conflict.
 
+	networks
+		Shows a list of networks in your local data directory.
+
 	members
 		Shows a list of users in the network.
 
@@ -183,6 +191,18 @@ time_format() {
 	get_config "default" "time_format" | sed 's/^$/%b %d %R/'
 }
 
+pluralize() {
+	# $1: number
+	# $2: singular form
+	# $3: plural form
+	[ -z "$1" ] || [ "$1" = 0 ] && printf "no %s" "$3" && return
+	echo "$1" | awk -v singular="$2" -v plural="$3" '
+	{
+		if ($1 == 1) print $1 " " singular
+		else print $1 " " plural
+	}'
+}
+
 get_config() {
 	network=$1
 	variable=$2
@@ -193,14 +213,14 @@ get_config() {
 	echo ""
 }
 
-# pre: working directory is a valid network with a git repository
 get_users() {
+	# pre: working directory is a valid network with a git repository
 	find . -type d ! -path '*.git*' \
 				-a ! -path "./*/*" \
 	| sed -nE 's/\.\/(.+)/\1/p'
 }
 
-get_networks() {
+get_network_paths() {
 	# we don't use -maxdepth because it's not POSIX standard
 	find "$(data_dir)" -type d ! -path '*.git*' \
 		-a ! -path "$(data_dir)"\
@@ -213,12 +233,22 @@ get_default_network() {
 		echo "$default_network"
 		return
 	fi
-	networks=$(get_networks)
+	networks=$(get_network_paths)
 	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
 		echo "${networks##*/}"
 	else
 		echo ""
 	fi
+}
+
+get_network_messages() {
+	# pre: working directory is a valid network with a git repository
+	find . -type f -name "$(posts_file)" -exec cat '{}' \; | wc -l
+}
+
+get_network_remote() {
+	# pre: working directory is a valid network with a git repository
+	git remote -v | awk 'NR==1 { print $2 }'
 }
 
 get_editor() {
@@ -247,9 +277,9 @@ git_commit() {
 	git commit -q -m "$commit_msg" $commit_date
 }
 
-# pre: working directory is a valid network with a git repository
-# pre: $username contains the user name to use
 add_user() {
+	# pre: working directory is a valid network with a git repository
+	# pre: $username contains the user name to use
 	mkdir "$username" || die "Creating user directory"
 	create_file "$username/$(posts_file)"
 	git add "$username" >/dev/null
@@ -262,8 +292,8 @@ add_user() {
 	fi
 }
 
-# pre: working directory is a valid network with a git repository
 add_message() {
+	# pre: working directory is a valid network with a git repository
 	file=$1
 	shift
 	append_file "$username/$file" "$@"
@@ -317,6 +347,21 @@ cmd_members() {
 	get_users | sed 's/.*/@&/'
 }
 
+cmd_networks() {
+	# pre: network can be "" if there is no default network
+	for net in $(get_network_paths); do
+		cd "$net"
+		messages="$(pluralize "$(get_network_messages)" "message" "messages")"
+		users="$(pluralize "$(get_users | wc -l)" "user" "users")"
+		remote="$(get_network_remote)"
+		if [ -z "$remote" ]; then remote="no remote"; fi
+		default=""
+		if [ "${net##*/}" = "$network" ]; then default=" (default)"; fi
+		printf "%s [%s] [%s] [%s]%s\n" "${net##*/}" \
+			"$users" "$messages" "$remote" "$default"
+	done
+}
+
 cmd_post() {
 	message="$*"
 	if [ -z "$message" ]; then
@@ -333,6 +378,7 @@ cmd_post() {
 }
 
 format_log() {
+	# TODO: Merge this function in cmd_log, as it's not used anywhere else
 	local_format="$(time_format)"
 	while read -r line ; do
 		[ -z "$line" ] && continue

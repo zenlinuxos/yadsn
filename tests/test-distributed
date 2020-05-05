@@ -133,6 +133,51 @@ test_pull() {
 	$sn -n remote2 log | grep "test message"
 }
 
+###############
+# sn networks #
+###############
+
+test_networks_local() {
+	$sn create my-network || error "create"
+	$sn networks | assert_output "\
+my-network [1 user] [no messages] [no remote] (default)
+"
+}
+
+test_networks_local_default() {
+	$sn create my-network || error "create"
+	$sn create my-other-network || error "create"
+	$sn networks | assert_output "\
+my-other-network [1 user] [no messages] [no remote]
+my-network [1 user] [no messages] [no remote]
+"
+	echo "default_network=my-other-network" >> "$(config_file)"
+	$sn networks | assert_output "\
+my-other-network [1 user] [no messages] [no remote] (default)
+my-network [1 user] [no messages] [no remote]
+"
+}
+
+test_networks_local_posts() {
+	$sn create my-network || error "create"
+	$sn post one message || error "post1"
+	$sn networks | assert_output "\
+my-network [1 user] [1 message] [no remote] (default)
+"
+	$sn post another message || error "post2"
+	$sn networks | assert_output "\
+my-network [1 user] [2 messages] [no remote] (default)
+"
+}
+
+test_networks_remote() {
+	create_remote "remote-network"
+	$sn join "$network_url" my-remote || error "join"
+	$sn networks | assert_output "\
+my-remote [1 user] [no messages] [$network_url] (default)
+"
+}
+
 
 export TS_COLOR="true"
 #export TS_DEBUG="true"
