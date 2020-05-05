@@ -53,7 +53,9 @@ test_export_text_newlines() {
 Hello
 all
 !"
-	export_text "Hello\nall\n!" | assert_output "\
+	text_export "Hello
+all
+!" | assert_output "\
 Hello<NEWLINE>all<NEWLINE>!
 "
 }
