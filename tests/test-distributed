@@ -20,9 +20,10 @@
 # NOTE: assert_output uses multiple lines to avoid subshell last newline
 # 	trimming
 
-. lib/globals.sh
-
 sn="$(dirname "$(dirname "$0")")/yadsn"
+
+#shellcheck source=yadsn
+. "$sn"
 
 setup() {
 	mkdir -p "$ts_test_dir"
@@ -91,8 +92,10 @@ test_join_fail_too_many_parameters() {
 
 test_join_fail_existing_local() {
 	$sn create test-network
-	$sn join "$ts_test_dir/nonexisting.git" test-network
-	assert_status 1 $?
+	$sn join "$ts_test_dir/nonexisting.git" test-network 2>&1 \
+		| head -1 | assert_output "\
+Error: A network named 'test-network' already exists
+"
 }
 
 ###########

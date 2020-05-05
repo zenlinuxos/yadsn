@@ -17,11 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with yadsn.  If not, see <https://www.gnu.org/licenses/>.
 
-. lib/file-format.sh
+sn="$(dirname "$(dirname "$0")")/yadsn"
+
+#shellcheck source=yadsn
+. "$sn"
 
 setup() {
 	mkdir -p "$ts_test_dir"
-	export SN_DATA="$ts_test_dir"
 	cd "$ts_test_dir" || error "unable to enter test directory"
 }
 
@@ -35,20 +37,20 @@ error() {
 }
 
 test_create() {
-	create_file "test"
+	file_create "test"
 	assert_status 0 $?
 	find . -type f | wc -l | assert_output "\
 1
 "
 }
 
-test_export_text_doublequotes_escaped() {
-	export_text "Hello\"all!" | assert_output "\
+test_text_export_doublequotes_escaped() {
+	text_export "Hello\"all!" | assert_output "\
 Hello\"\"all!
 "
 }
 
-test_export_text_newlines() {
+test_text_export_newlines() {
 	printf "Hello\nall\n!" | assert_output "\
 Hello
 all
@@ -60,34 +62,34 @@ Hello<NEWLINE>all<NEWLINE>!
 "
 }
 
-test_append_file_simple() {
-	create_file "test"
-	append_file "test" "one field and line"
+test_file_append_simple() {
+	file_create "test"
+	file_append "test" "one field and line"
 	assert_output "\
 \"one field and line\"
 " < "test"
 }
 
-test_append_file_multiline() {
-	create_file "test"
-	append_file "test" "one line
+test_file_append_multiline() {
+	file_create "test"
+	file_append "test" "one line
 another line"
 	assert_output "\
 \"one line<NEWLINE>another line\"
 " < "test"
 }
 
-test_append_file_multifield() {
-	create_file "test"
-	append_file "test" "field 1" "another field"
+test_file_append_multifield() {
+	file_create "test"
+	file_append "test" "field 1" "another field"
 	assert_output "\
 \"field 1\",\"another field\"
 " < "test"
 }
 
-test_append_file_full() {
-	create_file "test"
-	append_file "test" "field \"1\"" "another field" "third with
+test_file_append_full() {
+	file_create "test"
+	file_append "test" "field \"1\"" "another field" "third with
 multiple
 lines"
 	assert_output "\
@@ -95,17 +97,17 @@ lines"
 " < "test"
 }
 
-test_import_text() {
-	import_text "Hello<NEWLINE>all" | assert_output "\
+test_text_import() {
+	text_import "Hello<NEWLINE>all" | assert_output "\
 Hello
 all
 "
-	import_text "Hello<NEWLINE>all<NEWLINE>" | assert_output "\
+	text_import "Hello<NEWLINE>all<NEWLINE>" | assert_output "\
 Hello
 all
 
 "
-	import_text "Hello\"\"all\"\"" | assert_output "\
+	text_import "Hello\"\"all\"\"" | assert_output "\
 Hello\"all\"
 "
 }

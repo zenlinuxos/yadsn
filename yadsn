@@ -19,9 +19,6 @@
 
 set -eu
 
-. lib/globals.sh
-. lib/file-format.sh
-
 CMDNAME=${0##*/}
 
 main() {
@@ -77,7 +74,8 @@ main() {
 			[ -n "${1:-}" ] || die "Missing required Git URL"
 			[ "$#" -gt 2 ] && die "Too many arguments"
 			network_url="$1"
-			network="${2:-$(extract_network_from_url "$network_url")}"
+			# remove until the first / (included) and the .git suffix (if present)
+			network="${2:-$(echo "${network_url##*/}" | sed 's/\.git$//')}"
 			username="${username:-$USER}"
 			cmd_join
 		;;
@@ -171,135 +169,8 @@ EOF
 	exit 1
 }
 
-die() {
-	echo "Error: $1" >&2
-	[ "${2:-}" = 'no' ] || echo "Try '$CMDNAME --help' for more information." >&2
-	exit 1
-}
-
-clean() {
-	[ -e "${tmpfile:-}" ] && rm -f "$tmpfile" >/dev/null 2>&1
-	return 0
-}
-
-extract_network_from_url() {
-	# remove all until the first / (included) and the .git suffix (if present)
-	echo "${1##*/}" | sed 's/\.git$//'
-}
-
-time_format() {
-	get_config "default" "time_format" | sed 's/^$/%b %d %R/'
-}
-
-pluralize() {
-	# $1: number
-	# $2: singular form
-	# $3: plural form
-	[ -z "$1" ] || [ "$1" = 0 ] && printf "no %s" "$3" && return
-	echo "$1" | awk -v singular="$2" -v plural="$3" '
-	{
-		if ($1 == 1) print $1 " " singular
-		else print $1 " " plural
-	}'
-}
-
-get_config() {
-	network=$1
-	variable=$2
-	[ -f "$(config_file)" ] || { echo "" ; return ; }
-	while IFS='=' read -r key val ; do
-		[ "$key" = "${network}_${variable}" ] && { echo "$val" ; return ; }
-	done < "$(config_file)"
-	echo ""
-}
-
-get_users() {
-	# pre: working directory is a valid network with a git repository
-	find . -type d ! -path '*.git*' \
-				-a ! -path "./*/*" \
-	| sed -nE 's/\.\/(.+)/\1/p'
-}
-
-get_network_paths() {
-	# we don't use -maxdepth because it's not POSIX standard
-	find "$(data_dir)" -type d ! -path '*.git*' \
-		-a ! -path "$(data_dir)"\
-		-a ! -path "$(data_dir)/*/*"
-}
-
-get_default_network() {
-	default_network=$(get_config default network)
-	if [ -n "$default_network" ]; then
-		echo "$default_network"
-		return
-	fi
-	networks=$(get_network_paths)
-	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
-		echo "${networks##*/}"
-	else
-		echo ""
-	fi
-}
-
-get_network_messages() {
-	# pre: working directory is a valid network with a git repository
-	find . -type f -name "$(posts_file)" -exec cat '{}' \; | wc -l
-}
-
-get_network_remote() {
-	# pre: working directory is a valid network with a git repository
-	git remote -v | awk 'NR==1 { print $2 }'
-}
-
-get_editor() {
-	for editor in "${VISUAL:-}" "${EDITOR:-}" ; do
-		if command -v "$editor" >/dev/null 2>&1 ; then
-			echo "$editor"
-			return
-		fi
-	done
-	echo "vi"
-}
-
-get_likes() {
-	find . -type f \( ! -path '*.git*' \
-		-a -name "$(likes_file)" \) -print0 \
-		| xargs -0 grep "^\"$1" \
-		| wc -l
-}
-
-git_commit() {
-	commit_msg=$1
-	# allow date forging for testing purposes
-	commit_date=${SN_TEST_NOW:-}
-	[ -n "$commit_date" ] && commit_date="--date $commit_date"
-	# shellcheck disable=2086
-	git commit -q -m "$commit_msg" $commit_date
-}
-
-add_user() {
-	# pre: working directory is a valid network with a git repository
-	# pre: $username contains the user name to use
-	mkdir "$username" || die "Creating user directory"
-	create_file "$username/$(posts_file)"
-	git add "$username" >/dev/null
-	git_commit "User '$username' joined"
-	# add as default user only if it's the first user added
-	# locally. For example, currently it's allowed to post as any
-	# user or you could change the value in the config file.
-	if ! grep "^${network}_username=" "$(config_file)" ; then
-		echo "${network}_username=$username" >> "$(config_file)"
-	fi
-}
-
-add_message() {
-	# pre: working directory is a valid network with a git repository
-	file=$1
-	shift
-	append_file "$username/$file" "$@"
-	git add "$username" >/dev/null
-	git_commit "User '$username' added ${file##*/}"
-}
+############################################################################
+# commands
 
 cmd_create() {
 	[ -d "$(network_dir "$network")" ] \
@@ -367,7 +238,7 @@ cmd_post() {
 	if [ -z "$message" ]; then
 		umask 077
 		tmpfile=$(mktemp)
-		[ -n "$tmpfile" ] && $(get_editor) "$tmpfile"
+		[ -n "$tmpfile" ] && $(editor) "$tmpfile"
 		message=$(cat "$tmpfile")
 		rm -f "$tmpfile"
 	fi
@@ -377,10 +248,20 @@ cmd_post() {
 	echo "Posted message to '$network' with user '$username'"
 }
 
-format_log() {
-	# TODO: Merge this function in cmd_log, as it's not used anywhere else
-	local_format="$(time_format)"
-	while read -r line ; do
+cmd_log() {
+	# using git blame allows to show always the latest version of a post, and
+	# don't show deleted posts. This would be really complex and inefficient
+	# using git log.
+	local_format="$(get_time_format)"
+	for user in $(get_users) ; do
+		# '--date unix' prints unix time in UTC
+		entry=$(git blame --date unix "$user/$(posts_file)" \
+			| sed -E 's/^([0-9a-z]+) \(.* ([0-9]+) [0-9 ]+\) "(.*)"$/\2\t'"$user"'\t\1\t\3/')
+		entry=$(text_shorten "$entry")
+		printf "%s\n" "$entry"
+	# sort by unix time, and then format the output
+	done | sort -rn \
+	| while read -r line ; do
 		[ -z "$line" ] && continue
 		msg_id="$(echo "$line" | cut -f3)"
 		printf "[%s | #%s | ❤️%s] @%s: %s\n" \
@@ -394,18 +275,66 @@ format_log() {
 	unset local_format
 }
 
-cmd_log() {
-	# using git blame allows to show always the latest version of a post, and
-	# don't show deleted posts. This would be really complex and inefficient
-	# using git log.
-	for user in $(get_users) ; do
-		# '--date unix' prints unix time in UTC
-		entry=$(git blame --date unix "$user/$(posts_file)" \
-			| sed -E 's/^([0-9a-z]+) \(.* ([0-9]+) [0-9 ]+\) "(.*)"$/\2\t'"$user"'\t\1\t\3/')
-		entry=$(shorten_text "$entry")
-		printf "%s\n" "$entry"
-	# sort by unix time, and then format the output
-	done | sort -rn | format_log
+cmd_show() {
+	# trick: don't use $() to be able to access function msg_* variables here
+	get_message_data >/dev/null
+	printf "[%s | %s] by @%s (❤️%s)\n\n" \
+		"$(date +"$(get_time_format)" -d @"$msg_date")" \
+		"#$msg_short_id" \
+		"$msg_user" \
+		"$(get_likes "$msg_full_id")"
+	printf "%s\n" "$(text_import "$msg_text")"
+}
+
+cmd_like() {
+	get_message_data >/dev/null
+	grep -q "$msg_full_id" "$username/$(likes_file)" 2>/dev/null \
+		&& die "You already liked this message!" "no"
+	add_message "$(likes_file)" "$msg_full_id"
+	echo "Liked message from '$msg_user' in network '$network'"
+}
+
+############################################################################
+# data directory access
+
+add_user() {
+	# pre: working directory is a valid network with a git repository
+	# pre: $username contains the user name to use
+	mkdir "$username" || die "Creating user directory"
+	file_create "$username/$(posts_file)"
+	git add "$username" >/dev/null
+	git_commit "User '$username' joined"
+	# add as default user only if it's the first user added
+	# locally. For example, currently it's allowed to post as any
+	# user or you could change the value in the config file.
+	if ! grep "^${network}_username=" "$(config_file)" ; then
+		echo "${network}_username=$username" >> "$(config_file)"
+	fi
+}
+
+add_message() {
+	# pre: working directory is a valid network with a git repository
+	file=$1
+	shift
+	file_append "$username/$file" "$@"
+	git add "$username" >/dev/null
+	git_commit "User '$username' added ${file##*/}"
+}
+
+get_likes() {
+	find . -type f \( ! -path '*.git*' \
+		-a -name "$(likes_file)" \) -print0 \
+		| xargs -0 grep "^\"$1" \
+		| wc -l
+}
+
+git_commit() {
+	commit_msg=$1
+	# allow date forging for testing purposes
+	commit_date=${SN_TEST_NOW:-}
+	[ -n "$commit_date" ] && commit_date="--date $commit_date"
+	# shellcheck disable=2086
+	git commit -q -m "$commit_msg" $commit_date
 }
 
 get_message_data() {
@@ -422,23 +351,154 @@ get_message_data() {
 	msg_text=$(echo "$msg_out" | sed -nE 's/^\+"(.*)"$/\1/p')
 }
 
-cmd_show() {
-	# trick: don't use $() to be able to access function msg_* variables here
-	get_message_data >/dev/null
-	printf "[%s | %s] by @%s (❤️%s)\n\n" \
-		"$(date +"$(time_format)" -d @"$msg_date")" \
-		"#$msg_short_id" \
-		"$msg_user" \
-		"$(get_likes "$msg_full_id")"
-	printf "%s\n" "$(import_text "$msg_text")"
+get_users() {
+	# pre: working directory is a valid network with a git repository
+	find . -type d ! -path '*.git*' \
+				-a ! -path "./*/*" \
+	| sed -nE 's/\.\/(.+)/\1/p'
 }
 
-cmd_like() {
-	get_message_data >/dev/null
-	grep -q "$msg_full_id" "$username/$(likes_file)" 2>/dev/null \
-		&& die "You already liked this message!" "no"
-	add_message "$(likes_file)" "$msg_full_id"
-	echo "Liked message from '$msg_user' in network '$network'"
+get_network_paths() {
+	# we don't use -maxdepth because it's not POSIX standard
+	find "$(data_dir)" -type d ! -path '*.git*' \
+		-a ! -path "$(data_dir)"\
+		-a ! -path "$(data_dir)/*/*"
 }
 
-main "$@"
+get_default_network() {
+	default_network=$(get_config default network)
+	if [ -n "$default_network" ]; then
+		echo "$default_network"
+		return
+	fi
+	networks=$(get_network_paths)
+	if [ "$(echo "$networks" | wc -l)" = "1" ]; then
+		echo "${networks##*/}"
+	else
+		echo ""
+	fi
+}
+
+get_network_messages() {
+	# pre: working directory is a valid network with a git repository
+	find . -type f -name "$(posts_file)" -exec cat '{}' \; | wc -l
+}
+
+get_network_remote() {
+	# pre: working directory is a valid network with a git repository
+	git remote -v | awk 'NR==1 { print $2 }'
+}
+
+get_config() {
+	network=$1
+	variable=$2
+	[ -f "$(config_file)" ] || { echo "" ; return ; }
+	while IFS='=' read -r key val ; do
+		[ "$key" = "${network}_${variable}" ] && { echo "$val" ; return ; }
+	done < "$(config_file)"
+	echo ""
+}
+
+get_time_format() {
+	get_config "default" "time_format" | sed 's/^$/%b %d %R/'
+}
+
+############################################################################
+# data file access (CSV-like format with one entry per line and tabs)
+
+file_create() {
+	touch "$1"
+}
+
+file_append() {
+	file="$1"
+	shift
+	line=
+	for field in "$@"; do
+		line="${line},\"$(text_export "$field")\""
+	done
+	# Remove first comma character and append to file
+	echo "$line" | sed 's/^,//' >> "$file"
+}
+
+text_export() {
+	# Because we want each record in one line, the standard CSV file
+	# format does not fit.
+	echo "$1" | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/<NEWLINE>/g' \
+			  | sed 's/"/""/g'
+}
+
+text_import() {
+	echo "$1" | sed 's/<NEWLINE>/\n/g' \
+			  | sed 's/""/"/g'
+}
+
+text_shorten() {
+	echo "$1" | sed 's/<NEWLINE>.*$/.../g' \
+			  | sed 's/""/"/g'
+}
+
+############################################################################
+# globals
+
+data_dir() {
+	echo "$YADSN_DATA"
+}
+
+config_file() {
+	echo "$(data_dir)/config"
+}
+
+posts_file() {
+	echo posts
+}
+
+likes_file() {
+	echo likes
+}
+
+network_dir() {
+	echo "$(data_dir)/$1"
+}
+
+############################################################################
+# utils
+
+die() {
+	echo "Error: $1" >&2
+	[ "${2:-}" = 'no' ] || echo "Try '$CMDNAME --help' for more information." >&2
+	exit 1
+}
+
+clean() {
+	[ -e "${tmpfile:-}" ] && rm -f "$tmpfile" >/dev/null 2>&1
+	return 0
+}
+
+pluralize() {
+	# $1: number
+	# $2: singular form
+	# $3: plural form
+	[ -z "$1" ] || [ "$1" = 0 ] && printf "no %s" "$3" && return
+	echo "$1" | awk -v singular="$2" -v plural="$3" '
+	{
+		if ($1 == 1) print $1 " " singular
+		else print $1 " " plural
+	}'
+}
+
+editor() {
+	for editor in "${VISUAL:-}" "${EDITOR:-}" ; do
+		if command -v "$editor" >/dev/null 2>&1 ; then
+			echo "$editor"
+			return
+		fi
+	done
+	echo "vi"
+}
+
+# Allow including the script from test, to be able to access some functions
+# directly.
+if [ "$CMDNAME" = "yadsn" ]; then
+	main "$@"
+fi
