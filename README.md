@@ -32,7 +32,7 @@ chmod +x ~/bin/yadsn
 
 ### Portability and testing
 
-`yadsn` has been only tested on Linux, but it should work on any other *Nix-like system, possibly including Cygwin on Windows.
+`yadsn` has been only tested with the [Debian Almquist Shell (dash)](https://en.wikipedia.org/wiki/Almquist_shell), the default shell in Debian/Ubuntu GNU/Linux systems, but it should work on any other *Nix-like system, possibly including Cygwin on Windows.
 
 ### Requirements
 
