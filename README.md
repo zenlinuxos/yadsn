@@ -13,11 +13,11 @@ It has the following features:
 
 ### For users
 
-1. Supposing `~/bin` is in your `$PATH`, download the yadsn script on it using e.g. wget:
-
-	wget -O ~/bin/yadsn https://github.com/davidag/yadsn/raw/master/yadsn
-	chmod +x ~/bin/yadsn
-
+1. Supposing `~/bin` is in your `$PATH`, download the `yadsn` script on it using e.g. `wget`:
+```
+wget -O ~/bin/yadsn https://github.com/davidag/yadsn/raw/master/yadsn
+chmod +x ~/bin/yadsn
+```
 2. Follow the quick tutorial or read all possible commands.
 
 ### For development
@@ -32,22 +32,53 @@ It has the following features:
 
 ### Portability and testing
 
-yadsn has been only tested on Linux, but it should work on any other *Nix-like system, possibly including Cygwin on Windows.
+`yadsn` has been only tested on Linux, but it should work on any other *Nix-like system, possibly including Cygwin on Windows.
 
 ### Requirements
 
 For users:
 
-* *Git* is required for basic operation.
-* GNU programs: *find*, *grep*, *sed*, *wc*, *xargs*, *mktemp*.
+* `git` is required for basic operation.
+* GNU programs: `find`, `grep`, `awk`, `sed`, `wc`, `xargs`, `mktemp`.
 
 For yadsn development:
 
-* *wget* is used to download the *ts* shell testing utility in the `test/` directory.
+* `wget` is used to download the `ts` shell testing utility in the `test/` directory.
 	* [ts](https://github.com/thinkerbot/ts) (test script), a test framework for testing shell scripts (POSIX-only).
 
 ## Quick tutorial
-TODO
+You can create a local network...
+```
+$ yadsn create team-network
+```
+...and post any messages you want using the `post` command:
+```
+$ yadsn post "I've found this interesting tool for command-line communication, it's called yadsn."
+```
+You could as well use your default editor
+```
+$ yadsn post
+```
+When you decide you want to share your network, you can associate a remote repository to it:
+```
+# Supposing you have created a Gitlab repository named team-network
+$ yadsn remote git@gitlab.com:yourusername/team-network.git
+```
+Now push your changes:
+```
+# Using the -u flag is optional if you only have one network configured
+$ yadsn -u team-network push
+```
+To see your timeline of messages you can pull and log:
+```
+$ yadsn pull
+$ yadsn log
+```
+Other people who want to participate in this network could directly join to it:
+```
+# This automatically uses "team-network" as the local name
+$ yadsn join git@gitlab.com:yourusername/team-network.git
+```
 
 ## Usage
 
@@ -119,7 +150,7 @@ Commands
 
 ### Network repository
 
-There is one Git repository per social network you have created or joined to.
+There is one Git repository per social network you have created or joined to. Each network has its own sub-directory in the `$YADSN_DATA` directory.
 
 ```
 network/
@@ -132,7 +163,18 @@ network/
 
 ### File format
 
-All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when shown to the user.
+All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when printed in the terminal.
+
+## TODO
+
+- Cryptographic user identification and data signing
+- Integrity checks on push
+- Performance tests and optimizations
+- Colored output
+- Automatic conflict handling on pull
+- Replies and follows
+- Network merging
+- Message deletion and edition
 
 ## License
 
