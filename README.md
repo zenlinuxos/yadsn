@@ -118,6 +118,10 @@ Commands
 		provided, it will be usually to identify the network locally.
 		Otherwise, the network name is deduced from the URL.
 
+	remote <git-url>
+		Associates a remote network identifed by a Git URL with a local,
+		existing network. The default network will be used, unless -n is used.
+
 	push
 		Push locally made changes to the remote Git repository. This command
 		is only valid if the network was created using the 'join' command.

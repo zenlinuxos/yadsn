@@ -98,6 +98,27 @@ Error: A network named 'test-network' already exists
 "
 }
 
+#############
+# sn remote #
+#############
+
+test_remote() {
+	create_remote "remote-network"
+	$sn create local-network || error "create"
+	$sn -u local-network remote "$network_url" || error "remote"
+	$sn networks | assert_output "\
+local-network [1 user] [no messages] [$network_url] (default)
+"
+}
+
+test_remote_nonlocal() {
+	create_remote "remote-network"
+	$sn join "$network_url" local-network || error "join"
+	$sn -u local-network remote "$network_url" 2>&1 || head -1 || assert_output "\
+Error: 'local-network' already has a remote
+"
+}
+
 ###########
 # sn push #
 ###########

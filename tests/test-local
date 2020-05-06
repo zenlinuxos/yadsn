@@ -64,7 +64,7 @@ test_create() {
 
 test_create_too_many_parameters() {
 	$sn create test network 2>&1 | head -1 | assert_output "\
-Error: Too many arguments
+Error: Invalid number of arguments
 "
 }
 

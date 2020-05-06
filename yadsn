@@ -64,7 +64,7 @@ main() {
 	case $cmd in
 		create)
 			[ -n "${1:-}" ] || die "Missing name of new network"
-			[ "$#" -eq 1 ] || die "Too many arguments"
+			[ "$#" -eq 1 ] || die "Invalid number of arguments"
 			network="$1"
 			username="${username:-$USER}"
 			cmd_create
@@ -78,6 +78,13 @@ main() {
 			network="${2:-$(echo "${network_url##*/}" | sed 's/\.git$//')}"
 			username="${username:-$USER}"
 			cmd_join
+		;;
+
+		remote)
+			[ -n "$network" ] || die "No default network defined in config"
+			[ "$#" -eq 1 ] || die "Invalid number of arguments"
+			network_url="$1"
+			cmd_remote
 		;;
 
 		post)
@@ -136,6 +143,10 @@ Commands
 		provided, it will be usually to identify the network locally.
 		Otherwise, the network name is deduced from the URL.
 
+	remote <git-url>
+		Associates a remote network identifed by a Git URL with a local,
+		existing network. The default network will be used, unless -n is used.
+
 	push
 		Push locally made changes to the remote Git repository. This command
 		is only valid if the network was created using the 'join' command.
@@ -192,6 +203,12 @@ cmd_join() {
 		|| die "Unable to change into network directory"
 	add_user
 	echo "Joined network '$network' as user '$username'."
+}
+
+cmd_remote() {
+	[ -z "$(get_network_remote)" ] || die "'$network' already has a remote"
+	git remote add origin "$network_url" || die "Adding Git remote"
+	echo "Associated network '$network' with remote '$network_url'"
 }
 
 cmd_push() {
