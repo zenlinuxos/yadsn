@@ -88,13 +88,17 @@ Associated network 'team-network' with remote 'git@gitlab.com:yourusername/team-
 Now push your changes:
 ```
 $ yadsn push
-... git information ...
 Pushed local network changes to remote
 ```
 Other people who want to participate in this network could directly join to it:
 ```
 # This automatically uses "team-network" as the local network name
 $ yadsn join git@gitlab.com:yourusername/team-network.git
+```
+A list of available networks can be listed using the `networks` command:
+```
+$ yadsn networks
+team-network [1 user] [2 messages] [git@gitlab.com:davidalfonso/team-network.git] (default)
 ```
 
 ## Usage
