@@ -98,7 +98,7 @@ $ yadsn join git@gitlab.com:yourusername/team-network.git
 A list of available networks can be listed using the `networks` command:
 ```
 $ yadsn networks
-team-network [1 user] [2 messages] [git@gitlab.com:davidalfonso/team-network.git] (default)
+team-network [1 user] [2 messages] [git@gitlab.com:yourusername/team-network.git] (default)
 ```
 
 ## Usage
