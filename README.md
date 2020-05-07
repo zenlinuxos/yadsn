@@ -84,7 +84,7 @@ $ yadsn join git@gitlab.com:yourusername/team-network.git
 
 ### Configuration
 
-yadsn saves all network and configuration data in a directory defined in the `$YADSN_DATA` shell variable. By default, this directory corresponds to: `~/.yadsn`
+yadsn saves all network and configuration data in a directory defined in the `$YADSN_DATA` shell variable. By default, this directory corresponds to: `~/.sn`
 
 yadsn uses a INI-like configuration file which resides in `$YADSN_DATA/config` and can contain the following variables:
 
