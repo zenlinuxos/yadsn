@@ -50,33 +50,50 @@ For yadsn development:
 You can create a local network...
 ```
 $ yadsn create team-network
+Created network 'team-network'. Joined as 'david'.
 ```
 ...and post any messages you want using the `post` command:
 ```
-$ yadsn post "I've found this interesting tool for command-line communication, it's called yadsn."
+# Using the -u flag is optional if you only have one network configured, as it's assumed in this tutorial.
+
+$ yadsn -u team-network post "I've found this interesting tool for command-line communication, it's called yadsn."
+Posted message to 'team-network' with user 'david'
 ```
 You could as well use your default editor
 ```
 $ yadsn post
 ```
+You can see your posts using the `log` command:
+```
+$ yadsn log
+[May 07 13:44 | #3744e29b | ❤️0] @david: Another message with this title...
+[May 07 13:42 | #049a6f38 | ❤️0] @david: I've found this interesting tool for command-line communication, it's called yadsn.
+```
+If you want to see a post with more than one line, use the `show` command:
+```
+$ yadsn show #3744e29b
+[May 07 13:44 | #3744e29] by @david (❤️0)
+
+Another message with this title
+
+long text with
+multiple lines
+```
 When you decide you want to share your network, you can associate a remote repository to it:
 ```
 # Supposing you have created a Gitlab repository named team-network
 $ yadsn remote git@gitlab.com:yourusername/team-network.git
+Associated network 'team-network' with remote 'git@gitlab.com:yourusername/team-network.git'
 ```
 Now push your changes:
 ```
-# Using the -u flag is optional if you only have one network configured
-$ yadsn -u team-network push
-```
-To see your timeline of messages you can pull and log:
-```
-$ yadsn pull
-$ yadsn log
+$ yadsn push
+... git information ...
+Pushed local network changes to remote
 ```
 Other people who want to participate in this network could directly join to it:
 ```
-# This automatically uses "team-network" as the local name
+# This automatically uses "team-network" as the local network name
 $ yadsn join git@gitlab.com:yourusername/team-network.git
 ```
 
