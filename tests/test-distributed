@@ -25,6 +25,9 @@ sn="$(dirname "$(dirname "$0")")/yadsn"
 #shellcheck source=yadsn
 . "$sn"
 
+# see https://github.com/thinkerbot/ts/pull/24
+set +u
+
 setup() {
 	mkdir -p "$ts_test_dir"
 	export YADSN_DATA="$ts_test_dir/data"
