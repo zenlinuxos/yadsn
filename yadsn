@@ -216,9 +216,8 @@ cmd_push() {
 	# we are conservative here and don't reset any local changes in the
 	# local Git repository of the network
 	[ -z "$(git status -s)" ] || die "Network directory has unknown changes!"
-	git push --dry-run 2>/dev/null 1>&2 \
+	git push -u origin master 2>/dev/null 1>&2 \
 		|| die "Can't push local changes, try 'pull' first"
-	git push
 	echo "Pushed local network changes to remote"
 }
 
