@@ -188,7 +188,7 @@ network/
 
 ### File format
 
-All network-related files follow the CSV standard defined in RFC... except for newlines, which are translated to <NEWLINE> in the files and converted back when printed in the terminal.
+All network-related files follow the CSV standard defined in [RFC 4180](https://www.ietf.org/rfc/rfc4180.txt), except for newlines, which are translated to <NEWLINE> in the files and converted back when printed in the terminal.
 
 ## TODO
 
