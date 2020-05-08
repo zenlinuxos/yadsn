@@ -175,13 +175,13 @@ test_networks_local_default() {
 	$sn create my-network || error "create"
 	$sn create my-other-network || error "create"
 	$sn networks | assert_output "\
-my-other-network [1 user] [no messages] [no remote]
 my-network [1 user] [no messages] [no remote]
+my-other-network [1 user] [no messages] [no remote]
 "
 	echo "default_network=my-other-network" >> "$(config_file)"
 	$sn networks | assert_output "\
-my-other-network [1 user] [no messages] [no remote] (default)
 my-network [1 user] [no messages] [no remote]
+my-other-network [1 user] [no messages] [no remote] (default)
 "
 }
 

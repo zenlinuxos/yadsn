@@ -378,7 +378,7 @@ get_network_paths() {
 	# we don't use -maxdepth because it's not POSIX standard
 	find "$(data_dir)" -type d ! -path '*.git*' \
 		-a ! -path "$(data_dir)"\
-		-a ! -path "$(data_dir)/*/*"
+		-a ! -path "$(data_dir)/*/*" | sort
 }
 
 get_default_network() {
